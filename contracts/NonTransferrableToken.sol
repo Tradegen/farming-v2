@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.3;
 
-import "../interfaces/INonTransferrableToken.sol";
-import "../openzeppelin-solidity/contracts/SafeMath.sol";
+import "./interfaces/INonTransferrableToken.sol";
+import "./openzeppelin-solidity/contracts/SafeMath.sol";
 
 /**
  * A token without transfer methods.
