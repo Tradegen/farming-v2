@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.3;
 
-import "../openzeppelin-solidity/contracts/Ownable.sol";
-import "../openzeppelin-solidity/contracts/SafeMath.sol";
-import "../openzeppelin-solidity/contracts/SafeERC20.sol";
-import "../openzeppelin-solidity/contracts/ReentrancyGuard.sol";
+import "./openzeppelin-solidity/contracts/Ownable.sol";
+import "./openzeppelin-solidity/contracts/SafeMath.sol";
+import "./openzeppelin-solidity/contracts/SafeERC20.sol";
+import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
 
 import "./NonTransferrableToken.sol";
-import "../interfaces/ITokenAllocator.sol";
+import "./interfaces/ITokenAllocator.sol";
 
 /**
  * A contract that lets its beneficiaries receive tokens proportional to
@@ -22,6 +22,8 @@ contract TokenAllocator is
 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+
+    /* ========== STATE VARIABLES ========== */
 
     /**
      * If true, the cap table cannot be altered
@@ -48,6 +50,8 @@ contract TokenAllocator is
      */
     mapping(address => uint256) public totalTokensReceivedAtLastRedemption;
 
+    /* ========== CONSTRUCTOR ========== */
+
     constructor(
         string memory name_,
         string memory symbol_,
@@ -58,6 +62,8 @@ contract TokenAllocator is
         transferOwnership(owner_);
         _token = IERC20(token_);
     }
+
+    /* ========== VIEWS ========== */
 
     function token() external view override returns (address) {
         return address(_token);
@@ -81,10 +87,39 @@ contract TokenAllocator is
         return NonTransferrableToken.balanceOf(_account);
     }
 
-    modifier notLocked {
-        require(!isLocked, "TokenAllocator: beneficiaries are locked");
-        _;
+    function earned(address _account)
+        external
+        view
+        override
+        returns (uint256 amount)
+    {
+        (amount, ) = _earned(_account);
     }
+
+    /* ========== MUTATIVE FUNCTIONS ========== */
+
+    /**
+     * Redeem tokens if the sender is the beneficiary
+     */
+    function getReward() external override nonReentrant returns (uint256) {
+        (uint256 amount, uint256 totalTokens) = _earned(msg.sender);
+        if (amount == 0) {
+            // Do nothing if there are no tokens to redeem
+            return 0;
+        }
+        totalTokensReceived = totalTokens;
+
+        // Transfer tokens
+        _token.safeTransfer(msg.sender, amount);
+
+        // Update beneficiary state
+        balanceAfterLastRedemption = _token.balanceOf(address(this));
+        totalTokensReceivedAtLastRedemption[msg.sender] = totalTokensReceived;
+        emit Redeemed(msg.sender, amount);
+        return amount;
+    }
+
+    /* ========== RESTRICTED FUNCTIONS ========== */
 
     /**
      * Add a beneficiary to the splitter.
@@ -113,14 +148,7 @@ contract TokenAllocator is
         renounceOwnership();
     }
 
-    function earned(address _account)
-        external
-        view
-        override
-        returns (uint256 amount)
-    {
-        (amount, ) = _earned(_account);
-    }
+    /* ========== INTERNAL FUNCTIONS ========== */
 
     /**
      * Computes the number of tokens that can be received
@@ -156,24 +184,10 @@ contract TokenAllocator is
         }
     }
 
-    /**
-     * Redeem tokens if the sender is the beneficiary
-     */
-    function getReward() external override nonReentrant returns (uint256) {
-        (uint256 amount, uint256 totalTokens) = _earned(msg.sender);
-        if (amount == 0) {
-            // Do nothing if there are no tokens to redeem
-            return 0;
-        }
-        totalTokensReceived = totalTokens;
+    /* ========== MODIFIERS ========== */
 
-        // Transfer tokens
-        _token.safeTransfer(msg.sender, amount);
-
-        // Update beneficiary state
-        balanceAfterLastRedemption = _token.balanceOf(address(this));
-        totalTokensReceivedAtLastRedemption[msg.sender] = totalTokensReceived;
-        emit Redeemed(msg.sender, amount);
-        return amount;
+    modifier notLocked {
+        require(!isLocked, "TokenAllocator: beneficiaries are locked");
+        _;
     }
 }
