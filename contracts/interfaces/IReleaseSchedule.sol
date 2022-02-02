@@ -3,19 +3,16 @@
 pragma solidity ^0.8.3;
 
 /**
- * A token release schedule defined by discrete periods.
+ * A token release schedule that lasts indefinitely.
  */
 interface IReleaseSchedule {
     /**
-     * Total number of periods until there are no more tokens.
+     * Gets the tokens scheduled to be released for a cycle.
      */
-    function totalPeriods() external view returns (uint256);
+    function getTokensForCycle(uint256 _cycleIndex) external view returns (uint256);
 
     /**
-     * Gets the tokens scheduled to be released for a period.
+     * Gets the index of the current cycle.
      */
-    function getTokensForPeriod(uint256 _periodIndex)
-        external
-        view
-        returns (uint256);
+    function getCurrentCycle() external view returns (uint256);
 }
