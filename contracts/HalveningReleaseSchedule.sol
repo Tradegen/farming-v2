@@ -13,9 +13,13 @@ import "./interfaces/IReleaseSchedule.sol";
 contract HalveningReleaseSchedule is IReleaseSchedule {
     using SafeMath for uint256;
 
-    uint256 public constant cycleDuration = 26 weeks;
+    /* ========== STATE VARIABLES ========== */
+
+    uint256 public constant override cycleDuration = 26 weeks;
     uint256 public immutable firstCycleDistribution;
     uint256 public immutable distributionStartTime;
+
+    /* ========== CONSTRUCTOR ========== */
 
     /**
      * @param firstCycleDistribution_ Number of tokens to distribute in the first cycle.
@@ -24,6 +28,8 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
         distributionStartTime = block.timestamp;
         firstCycleDistribution = firstCycleDistribution_;
     }
+
+    /* ========== VIEWS ========== */
 
     /**
      * Gets the tokens scheduled to be distributed for a specific cycle.

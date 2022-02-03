@@ -15,4 +15,9 @@ interface IReleaseSchedule {
      * Gets the index of the current cycle.
      */
     function getCurrentCycle() external view returns (uint256);
+
+    /**
+     * Returns the duration of each cycle.
+     */
+    function cycleDuration() external view returns (uint256);
 }
