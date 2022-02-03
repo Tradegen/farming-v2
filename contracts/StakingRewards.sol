@@ -7,21 +7,20 @@ import "./openzeppelin-solidity/contracts/Math.sol";
 import "./openzeppelin-solidity/contracts/SafeMath.sol";
 import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
 import "./openzeppelin-solidity/contracts/SafeERC20.sol";
+import "./openzeppelin-solidity/contracts/IERC1155.sol";
+import "./openzeppelin-solidity/contracts/ERC1155Holder.sol";
 
 // Inheritance
 import "./interfaces/IStakingRewards.sol";
 
-//Interfaces
-import "./interfaces/ISellable.sol";
-
-contract StakingRewards is IStakingRewards, ReentrancyGuard {
+contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
 
     IERC20 public rewardsToken;
-    ISellable public stakingToken;
+    IERC1155 public immutable stakingToken;
     uint256 public totalAvailableRewards;
     uint256 public rewardPerTokenStored;
 
@@ -40,14 +39,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
-        address _owner,
-        address _poolManager,
-        address _rewardsToken,
-        address _stakingToken
-    ) Owned(_owner) {
+    constructor(address _poolManager, address _rewardsToken, address _stakingToken) {
         rewardsToken = IERC20(_rewardsToken);
-        stakingToken = ISellable(_stakingToken);
+        stakingToken = IERC1155(_stakingToken);
         poolManager = _poolManager;
     }
 
@@ -76,9 +70,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard {
         _weightedBalance[msg.sender] = _weightedBalance[msg.sender].add(weightedAmount);
         _balances[msg.sender][tokenClass - 1] = _balances[msg.sender][tokenClass - 1].add(amount);
 
-        bool result = stakingToken.transfer(msg.sender, address(this), tokenClass, amount);
-
-        require(result, "Transfer failed");
+        stakingToken.safeTransferFrom(msg.sender, address(this), tokenClass, amount, "0x0");
 
         emit Staked(msg.sender, tokenClass, amount);
     }
@@ -93,9 +85,8 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard {
         _weightedBalance[msg.sender] = _weightedBalance[msg.sender].sub(weightedAmount);
         _balances[msg.sender][tokenClass - 1] = _balances[msg.sender][tokenClass - 1].sub(amount);
 
-        bool result = stakingToken.transfer(address(this), msg.sender, tokenClass, amount);
-
-        require(result, "Transfer failed");
+        stakingToken.setApprovalForAll(msg.sender, true);
+        stakingToken.safeTransferFrom(address(this), msg.sender, tokenClass, amount, "0x0");
 
         emit Withdrawn(msg.sender, tokenClass, amount);
     }
