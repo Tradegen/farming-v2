@@ -6,10 +6,42 @@ pragma solidity >=0.6.12;
  * @title A library for mathematical calculations.
  */
 library TradegenMath {
-    function log(uint256 x) public pure returns (uint256) {
+    /**
+    * @dev Scales a value based on the ratio of time elapsed to period duration.
+    * @dev scalar = (currentTimestamp - startTimestamp) / duration
+    * @dev x = (currentValue * scalar) + (previousValue * (1 - scalar))
+    * @param currentValue value of a metric for the current period.
+    * @param previousValue value of a metric for the previous period.
+    * @param currentTimestamp the current timestamp; most likely "block.timestamp".
+    * @param startTimestamp the timestamp at the start of the current period.
+    * @param duration length of the period.
+    * @return time-scaled value.
+    */
+    function scaleByTime(uint256 currentValue, uint256 previousValue, uint256 currentTimestamp, uint256 startTimestamp, uint256 duration) internal pure returns (uint256) {
+        if (duration == 0) {
+            return 0;
+        }
+
+        if (startTimestamp > currentTimestamp) {
+            return 0;
+        }
+
+        if (duration + startTimestamp < currentTimestamp) {
+            return 0;
+        }
+
+        return ((currentValue * (currentTimestamp - startTimestamp)) + (previousValue * (duration + startTimestamp - currentTimestamp))) / duration;
+    }
+
+    /**
+    * @dev Calculate log2(x) rounding down, where x is unsigned 256-bit integer number.
+    * @param x unsigned 256-bit integer number.
+    * @return result log2(x) unsigned 256-bit integer number.
+    */
+    function log(uint256 x) internal pure returns (uint256 result) {
         if (x == 0) return 0;
 
-        uint256 result = 1;
+        result = 1;
 
         while (x > 1) {
             if (x >= 2**128) { x >>= 128; result += 128; }
@@ -26,10 +58,10 @@ library TradegenMath {
     }
 
     /**
-    * @notice credit for this implementation goes to https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMath64x64.sol
+    * @notice credit for this implementation goes to https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMath64x64.sol.
     * @dev Calculate sqrt (x) rounding down, where x is unsigned 256-bit integer number.
-    * @param x unsigned 256-bit integer number
-    * @return sqrt(`x`) unsigned 128-bit integer number
+    * @param x unsigned 256-bit integer number.
+    * @return sqrt(`x`) unsigned 128-bit integer number.
     */
     function sqrt(uint256 x) internal pure returns (uint128) {
         if (x == 0) return 0;

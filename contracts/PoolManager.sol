@@ -106,7 +106,12 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
             return rewardPerTokenStored;
         }
 
-        return rewardPerTokenStored.add(block.timestamp.sub(lastUpdateTime).mul(getRewardRate()).mul(1e18).div(globalPeriods[currentPeriodIndex].totalWeight));
+        return rewardPerTokenStored.add((block.timestamp.sub(lastUpdateTime)).mul(getRewardRate()).mul(1e18).div(
+            TradegenMath.scaleByTime(globalPeriods[currentPeriodIndex].totalWeight,
+                                    currentPeriodIndex > 0 ? globalPeriods[currentPeriodIndex.sub(1)].totalWeight : 0,
+                                    block.timestamp,
+                                    getStartOfPeriod(currentPeriodIndex),
+                                    PERIOD_DURATION)));
     }
 
     function earned(address poolAddress) public view override returns (uint256) {
@@ -114,13 +119,23 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
 
-        return poolPeriods[poolAddress][currentPeriodIndex].weight.mul(rewardPerToken().sub(poolRewardPerTokenPaid[poolAddress])).div(1e18).add(rewards[poolAddress]);
+        return TradegenMath.scaleByTime(poolPeriods[poolAddress][currentPeriodIndex].weight,
+                                    currentPeriodIndex > 0 ? poolPeriods[poolAddress][currentPeriodIndex.sub(1)].weight : 0,
+                                    block.timestamp,
+                                    getStartOfPeriod(currentPeriodIndex),
+                                    PERIOD_DURATION).mul(rewardPerToken().sub(poolRewardPerTokenPaid[poolAddress])).div(1e18).add(rewards[poolAddress]);
     }
 
     function getPeriodIndex(uint256 timestamp) public view returns (uint256) {
         require(timestamp >= lastUpdateTime, "PoolManager: timestamp must be greater than start time.");
 
         return (timestamp.sub(startTime)).div(PERIOD_DURATION);
+    }
+
+    function getStartOfPeriod(uint256 periodIndex) public view returns (uint256) {
+        require(periodIndex >= 0, "PoolManager: period index must be positive.");
+
+        return startTime.add(periodIndex.mul(PERIOD_DURATION));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
