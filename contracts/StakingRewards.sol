@@ -13,6 +13,9 @@ import "./openzeppelin-solidity/contracts/ERC1155Holder.sol";
 // Inheritance
 import "./interfaces/IStakingRewards.sol";
 
+// Interfaces
+import "./interfaces/IPoolManager.sol";
+
 contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -20,7 +23,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     /* ========== STATE VARIABLES ========== */
 
     IERC20 public rewardsToken;
-    IERC1155 public immutable stakingToken;
+    IERC1155 public stakingToken;
+    IPoolManager public poolManager;
+    address public poolAddress;
     uint256 public totalAvailableRewards;
     uint256 public rewardPerTokenStored;
 
@@ -32,17 +37,16 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     mapping(address => uint256[4]) private _balances;
     mapping(address => uint256) private _weightedBalance;
 
-    address public immutable poolManager;
-
     //Weights per token class
     uint256[4] public WEIGHTS = [65, 20, 10, 5];
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _poolManager, address _rewardsToken, address _stakingToken) {
+    constructor(address _poolManager, address _rewardsToken, address _stakingToken, address _poolAddress) {
         rewardsToken = IERC20(_rewardsToken);
         stakingToken = IERC1155(_stakingToken);
-        poolManager = _poolManager;
+        poolManager = IPoolManager(_poolManager);
+        poolAddress = _poolAddress;
     }
 
     /* ========== VIEWS ========== */
@@ -91,13 +95,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
         emit Withdrawn(msg.sender, tokenClass, amount);
     }
 
-    function getReward() public override nonReentrant updateReward(msg.sender) {
-        uint256 reward = rewards[msg.sender];
-        if (reward > 0) {
-            rewards[msg.sender] = 0;
-            rewardsToken.transfer(msg.sender, reward);
-            emit RewardPaid(msg.sender, reward);
-        }
+    function getReward() public override nonReentrant {
+        poolManager.claimLatestRewards(poolAddress);
+        _getReward();
     }
 
     function exit() external override {
@@ -110,6 +110,18 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
         }
         
         getReward();
+    }
+
+    /* ========== INTERNAL FUNCTIONS ========== */
+
+    function _getReward() internal updateReward(msg.sender) {
+        uint256 reward = rewards[msg.sender];
+
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            rewardsToken.transfer(msg.sender, reward);
+            emit RewardPaid(msg.sender, reward);
+        }
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -135,7 +147,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     }
 
     modifier onlyPoolManager() {
-        require(msg.sender == poolManager, "StakingRewards: only the PoolManager contract can call this function");
+        require(msg.sender == address(poolManager), "StakingRewards: only the PoolManager contract can call this function");
         _;
     }
 
