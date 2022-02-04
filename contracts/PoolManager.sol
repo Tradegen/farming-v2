@@ -27,21 +27,36 @@ contract PoolManager is IPoolManager, ReentrancyGuard {
         uint256 unrealizedProfits;
     }
 
+    struct GlobalPeriodInfo {
+        uint256 numberOfEligiblePools;
+        uint256 totalWeight;
+    }
+
+    struct PoolPeriodInfo {
+        uint256 unrealizedProfits;
+        uint256 tokenPrice;
+    }
+
     /* ========== STATE VARIABLES ========== */
 
+    uint32 public constant PERIOD_DURATION = 7 days;
     uint256 public constant MINIMUM_POOL_DURATION = 30 days;
     uint256 public constant MINIMUM_NUMBER_OF_INVESTORS = 10;
     uint256 public constant MINIMUM_TOTAL_VALUE_LOCKED = 10 ** 21; // $1,000
+    uint256 public constant MAXIMUM_MULTIPLE_OF_AVERAGE = 10;
 
     IERC20 public rewardsToken;
     IReleaseEscrow public releaseEscrow;
     IReleaseSchedule public releaseSchedule;
     address public immutable poolFactory;
 
-    mapping(address => PoolInfo) public pools;
+    mapping(address => PoolInfo) public pools; // Keyed by pool address
+    mapping(uint256 => GlobalPeriodInfo) public globalPeriods; // Keyed by period index
+    mapping(uint256 => mapping(uint256 => PoolPeriodInfo)) public poolPeriods; // Keyed by pool address and period index
 
     uint256 public override totalUnrealizedProfits;
     uint256 public lastUpdateTime;
+    uint256 public startTime;
     uint256 public rewardPerTokenStored;
 
     mapping(address => uint256) public poolRewardPerTokenPaid;
@@ -54,6 +69,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard {
         releaseEscrow = IReleaseEscrow(_releaseEscrow);
         releaseSchedule = IReleaseSchedule(_releaseSchedule);
         poolFactory = _poolFactory;
+        startTime = block.timestamp;
     }
 
     /* ========== VIEWS ========== */
