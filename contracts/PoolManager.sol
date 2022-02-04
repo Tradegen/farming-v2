@@ -17,6 +17,9 @@ import "./interfaces/IReleaseEscrow.sol";
 import "./interfaces/IReleaseSchedule.sol";
 import "./interfaces/IStakingRewards.sol";
 
+//Libraries
+import "./libraries/TradegenMath.sol";
+
 contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -118,25 +121,6 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         require(timestamp >= lastUpdateTime, "PoolManager: timestamp must be greater than start time.");
 
         return (timestamp.sub(startTime)).div(PERIOD_DURATION);
-    }
-
-    function log(uint256 x) public pure returns (uint256) {
-        require(x >= 0, "PoolManager: x must be positive.");
-
-        uint256 result = 1;
-
-        while (x > 1) {
-            if (x >= 2**128) { x >>= 128; result += 128; }
-            if (x >= 2**64) { x >>= 64; result += 64; }
-            if (x >= 2**32) { x >>= 32; result += 32; }
-            if (x >= 2**16) { x >>= 16; result += 16; }
-            if (x >= 2**8) { x >>= 8; result += 8; }
-            if (x >= 2**4) { x >>= 4; result += 4; }
-            if (x >= 2**2) { x >>= 2; result += 2; }
-            if (x >= 2**1) { x >>= 1; result += 1; }
-        }
-
-        return result;
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -257,7 +241,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
         // Weight is scaled by 1000x
         uint256 averagePriceChange = (data.latestRecordedPrice.sub(data.previousRecordedPrice)).mul(1e18).div(data.previousRecordedPrice).div(data.latestRecordedPeriodIndex.sub(data.previousRecordedPeriodIndex));
-        return averagePriceChange.mul(log(data.unrealizedProfits.div(1e18)) ** 2).div(1e15);
+        return uint256(TradegenMath.sqrt(averagePriceChange.div(1e15))).mul(TradegenMath.log(data.unrealizedProfits.div(1e18)) ** 2);
     }
 
     /* ========== MODIFIERS ========== */
