@@ -26,25 +26,29 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         bool isEligible;
         address farmAddress;
         uint256 unrealizedProfits;
+        uint256 latestRecordedPrice;
+        uint256 latestRecordedPeriodIndex;
+        uint256 previousRecordedPrice;
+        uint256 previousRecordedPeriodIndex;
     }
 
     struct GlobalPeriodInfo {
-        uint256 numberOfEligiblePools;
+        uint256 totalUnrealizedProfits;
         uint256 totalWeight;
     }
 
     struct PoolPeriodInfo {
         uint256 unrealizedProfits;
         uint256 tokenPrice;
+        uint256 weight;
     }
 
     /* ========== STATE VARIABLES ========== */
 
-    uint32 public constant PERIOD_DURATION = 7 days;
+    uint32 public constant PERIOD_DURATION = 14 days;
     uint256 public constant MINIMUM_POOL_DURATION = 30 days;
     uint256 public constant MINIMUM_NUMBER_OF_INVESTORS = 10;
     uint256 public constant MINIMUM_TOTAL_VALUE_LOCKED = 10 ** 21; // $1,000
-    uint256 public constant MAXIMUM_MULTIPLE_OF_AVERAGE = 10;
 
     IERC20 public rewardsToken;
     IReleaseEscrow public releaseEscrow;
@@ -53,9 +57,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     mapping(address => PoolInfo) public pools; // Keyed by pool address
     mapping(uint256 => GlobalPeriodInfo) public globalPeriods; // Keyed by period index
-    mapping(uint256 => mapping(uint256 => PoolPeriodInfo)) public poolPeriods; // Keyed by pool address and period index
+    mapping(address => mapping(uint256 => PoolPeriodInfo)) public poolPeriods; // Keyed by pool address and period index
 
-    uint256 public override totalUnrealizedProfits;
     uint256 public lastUpdateTime;
     uint256 public startTime;
     uint256 public rewardPerTokenStored;
@@ -65,12 +68,14 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _rewardsToken, address _releaseEscrow, address _releaseSchedule, address _poolFactory, address _stakingToken) StakingRewardsFactory(address(this), _rewardsToken, _stakingToken) {
-        rewardsToken = IERC20(_rewardsToken);
-        releaseEscrow = IReleaseEscrow(_releaseEscrow);
-        releaseSchedule = IReleaseSchedule(_releaseSchedule);
-        poolFactory = _poolFactory;
-        startTime = block.timestamp;
+    constructor(address _rewardsToken, address _releaseEscrow, address _releaseSchedule, address _poolFactory, address _stakingToken)
+        StakingRewardsFactory(address(this), _rewardsToken, _stakingToken) {
+            rewardsToken = IERC20(_rewardsToken);
+            releaseEscrow = IReleaseEscrow(_releaseEscrow);
+            releaseSchedule = IReleaseSchedule(_releaseSchedule);
+            poolFactory = _poolFactory;
+            startTime = block.timestamp;
+            lastUpdateTime = block.timestamp;
     }
 
     /* ========== VIEWS ========== */
@@ -92,21 +97,46 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
     }
 
     function rewardPerToken() public view override returns (uint256) {
-        if (totalUnrealizedProfits == 0) {
+        uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
+
+        if (globalPeriods[currentPeriodIndex].totalWeight == 0) {
             return rewardPerTokenStored;
         }
 
-        uint256 rewardRate = getRewardRate();
-
-        return rewardPerTokenStored.add(block.timestamp.sub(lastUpdateTime).mul(rewardRate).mul(1e18).div(totalUnrealizedProfits));
+        return rewardPerTokenStored.add(block.timestamp.sub(lastUpdateTime).mul(getRewardRate()).mul(1e18).div(globalPeriods[currentPeriodIndex].totalWeight));
     }
 
     function earned(address poolAddress) public view override returns (uint256) {
         require(poolAddress != address(0), "PoolManager: invalid pool address.");
 
-        uint256 poolUnrealizedProfits = pools[poolAddress].unrealizedProfits;
+        uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
 
-        return poolUnrealizedProfits.mul(rewardPerToken().sub(poolRewardPerTokenPaid[poolAddress])).div(1e18).add(rewards[poolAddress]);
+        return poolPeriods[poolAddress][currentPeriodIndex].weight.mul(rewardPerToken().sub(poolRewardPerTokenPaid[poolAddress])).div(1e18).add(rewards[poolAddress]);
+    }
+
+    function getPeriodIndex(uint256 timestamp) public view returns (uint256) {
+        require(timestamp >= lastUpdateTime, "PoolManager: timestamp must be greater than start time.");
+
+        return (timestamp.sub(startTime)).div(PERIOD_DURATION);
+    }
+
+    function log(uint256 x) public pure returns (uint256) {
+        require(x >= 0, "PoolManager: x must be positive.");
+
+        uint256 result = 1;
+
+        while (x > 1) {
+            if (x >= 2**128) { x >>= 128; result += 128; }
+            if (x >= 2**64) { x >>= 64; result += 64; }
+            if (x >= 2**32) { x >>= 32; result += 32; }
+            if (x >= 2**16) { x >>= 16; result += 16; }
+            if (x >= 2**8) { x >>= 8; result += 8; }
+            if (x >= 2**4) { x >>= 4; result += 4; }
+            if (x >= 2**2) { x >>= 2; result += 2; }
+            if (x >= 2**1) { x >>= 1; result += 1; }
+        }
+
+        return result;
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -119,28 +149,62 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         return reward;
     }
 
-    function updateWeight(uint256 newUnrealizedProfits) external override nonReentrant poolIsValid(msg.sender) updateReward(msg.sender) {
+    function updateWeight(uint256 newUnrealizedProfits, uint256 poolTokenPrice) external override nonReentrant poolIsValid(msg.sender) updateReward(msg.sender) {
         require(newUnrealizedProfits >= 0, "PoolManager: unrealized profits cannot be negative.");
+        require(poolTokenPrice > 0, "PoolManager: pool token price must be greater than 0.");
+
+        uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
+        uint256 currentUnrealizedProfits = pools[msg.sender].unrealizedProfits;
+        uint256 currentPoolWeight = poolPeriods[msg.sender][currentPeriodIndex].weight;
+
+        // Update pool info
+        if (currentPeriodIndex > pools[msg.sender].latestRecordedPeriodIndex) {
+            pools[msg.sender].previousRecordedPrice = pools[msg.sender].latestRecordedPrice;
+            pools[msg.sender].previousRecordedPeriodIndex = pools[msg.sender].latestRecordedPeriodIndex; 
+        }
+        pools[msg.sender].unrealizedProfits = newUnrealizedProfits;
+        pools[msg.sender].latestRecordedPrice = poolTokenPrice;
+        pools[msg.sender].latestRecordedPeriodIndex = currentPeriodIndex;
 
         if (!pools[msg.sender].isEligible) {
             return;
         }
 
-        uint256 currentUnrealizedProfits = pools[msg.sender].unrealizedProfits;
+        uint256 newPoolWeight = _calculatePoolWeight(msg.sender);
 
-        totalUnrealizedProfits = totalUnrealizedProfits.sub(currentUnrealizedProfits).add(newUnrealizedProfits);
-        pools[msg.sender].unrealizedProfits = newUnrealizedProfits;
+        // Update pool info for current period
+        poolPeriods[msg.sender][currentPeriodIndex] = PoolPeriodInfo({
+            unrealizedProfits: newUnrealizedProfits,
+            tokenPrice: poolTokenPrice,
+            weight: newPoolWeight
+        });
+
+        // Update global info for current period
+        globalPeriods[currentPeriodIndex] = GlobalPeriodInfo({
+            totalUnrealizedProfits: globalPeriods[currentPeriodIndex].totalUnrealizedProfits.sub(currentUnrealizedProfits).add(newUnrealizedProfits),
+            totalWeight: globalPeriods[currentPeriodIndex].totalWeight.sub(currentPoolWeight).add(newPoolWeight)
+        });
 
         _getReward(msg.sender);
     }
 
-    function registerPool(address poolAddress) external override onlyPoolFactory {
+    function registerPool(address poolAddress, uint256 seedPrice) external override onlyPoolFactory {
         require(poolAddress != address(0), "PoolManager: invalid pool address.");
+        require(seedPrice > 0, "PoolManager: seed price must be greater than 0.");
 
         address farmAddress = _createFarm(msg.sender);
+        uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
 
-        pools[poolAddress].isValid = true;
-        pools[msg.sender].farmAddress = farmAddress;
+        pools[poolAddress] = PoolInfo({
+            isValid: true,
+            isEligible: false,
+            farmAddress: farmAddress,
+            unrealizedProfits: 0,
+            latestRecordedPrice: seedPrice,
+            latestRecordedPeriodIndex: currentPeriodIndex,
+            previousRecordedPrice: seedPrice,
+            previousRecordedPeriodIndex: currentPeriodIndex
+        });
 
         emit RegisteredPool(poolAddress, farmAddress);
     }
@@ -182,6 +246,18 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
             emit RewardPaid(poolAddress, reward);
         }
+    }
+
+    function _calculatePoolWeight(address poolAddress) internal view returns (uint256) {
+        PoolInfo memory data = pools[poolAddress];
+
+        if (data.latestRecordedPrice <= data.previousRecordedPrice) {
+            return 0;
+        }
+
+        // Weight is scaled by 1000x
+        uint256 averagePriceChange = (data.latestRecordedPrice.sub(data.previousRecordedPrice)).mul(1e18).div(data.previousRecordedPrice).div(data.latestRecordedPeriodIndex.sub(data.previousRecordedPeriodIndex));
+        return averagePriceChange.mul(log(data.unrealizedProfits.div(1e18)) ** 2).div(1e15);
     }
 
     /* ========== MODIFIERS ========== */
