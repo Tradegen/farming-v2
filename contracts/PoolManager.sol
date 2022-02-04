@@ -10,13 +10,14 @@ import "./openzeppelin-solidity/contracts/SafeERC20.sol";
 
 // Inheritance
 import "./interfaces/IPoolManager.sol";
+import "./StakingRewardsFactory.sol";
 
 // Interfaces
 import "./interfaces/IReleaseEscrow.sol";
 import "./interfaces/IReleaseSchedule.sol";
 import "./interfaces/IStakingRewards.sol";
 
-contract PoolManager is IPoolManager, ReentrancyGuard {
+contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -64,7 +65,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _rewardsToken, address _releaseEscrow, address _releaseSchedule, address _poolFactory) {
+    constructor(address _rewardsToken, address _releaseEscrow, address _releaseSchedule, address _poolFactory, address _stakingToken) StakingRewardsFactory(address(this), _rewardsToken, _stakingToken) {
         rewardsToken = IERC20(_rewardsToken);
         releaseEscrow = IReleaseEscrow(_releaseEscrow);
         releaseSchedule = IReleaseSchedule(_releaseSchedule);
@@ -136,9 +137,12 @@ contract PoolManager is IPoolManager, ReentrancyGuard {
     function registerPool(address poolAddress) external override onlyPoolFactory {
         require(poolAddress != address(0), "PoolManager: invalid pool address.");
 
-        pools[poolAddress].isValid = true;
+        address farmAddress = _createFarm(msg.sender);
 
-        emit RegisteredPool(poolAddress);
+        pools[poolAddress].isValid = true;
+        pools[msg.sender].farmAddress = farmAddress;
+
+        emit RegisteredPool(poolAddress, farmAddress);
     }
 
     function markPoolAsEligible(uint32 createdOn, uint256 totalValueLocked, uint256 numberOfInvestors) external override poolIsValid(msg.sender) returns (bool) {
@@ -210,7 +214,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard {
     /* ========== EVENTS ========== */
 
     event RewardPaid(address indexed user, uint256 reward);
-    event RegisteredPool(address indexed poolAddress);
+    event RegisteredPool(address indexed poolAddress, address farmAddress);
     event MarkedPoolAsEligible(address indexed poolAddress);
     event UpdatedWeight(address indexed poolAddress, uint256 newUnrealizedProfits);
 }
