@@ -9,8 +9,6 @@ interface IPoolManager {
 
     function earned(address poolAddress) external view returns (uint256);
 
-    function getRewardRate() external view returns (uint256);
-
     function rewardPerToken()external view returns (uint256);
 
     // Restricted

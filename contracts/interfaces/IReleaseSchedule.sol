@@ -20,4 +20,12 @@ interface IReleaseSchedule {
      * Returns the duration of each cycle.
      */
     function cycleDuration() external view returns (uint256);
+
+    function getStartOfCycle(uint256 _cycleIndex) external view returns (uint256);
+
+    function getRewardRate(uint256 _cycleIndex) external view returns (uint256);
+
+    function getCurrentRewardRate() external view returns (uint256);
+
+    function getStartOfCurrentCycle() external view returns (uint256);
 }

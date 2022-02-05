@@ -63,11 +63,18 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
      * @notice This function is called by the PoolManager contract whenever a user claims rewards for a given pool.
      */
     function withdraw() external override started onlyBeneficiary nonReentrant {
-        uint256 cycleIndex = schedule.getCurrentCycle();
-        uint256 tokensForCycle = schedule.getTokensForCycle(cycleIndex);
-        uint256 cycleDuration = schedule.cycleDuration();
-        uint256 availableTokens = (block.timestamp.sub(lastWithdrawalTime)).mul(tokensForCycle).div(cycleDuration);
+        uint256 startOfCycle = schedule.getStartOfCurrentCycle();
+        uint256 availableTokens = 0;
 
+        // Check for cross-cycle rewards
+        if (lastWithdrawalTime < startOfCycle) {
+            availableTokens = (startOfCycle.sub(lastWithdrawalTime)).mul(schedule.getCurrentRewardRate().mul(2));
+            availableTokens = availableTokens.add((block.timestamp.sub(startOfCycle)).mul(schedule.getCurrentRewardRate()));
+        }
+        else {
+            availableTokens = (block.timestamp.sub(lastWithdrawalTime)).mul(schedule.getCurrentRewardRate());
+        }
+        
         lastWithdrawalTime = block.timestamp;
         rewardToken.safeTransfer(beneficiary, availableTokens);
     }

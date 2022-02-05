@@ -34,14 +34,30 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
     /**
      * Gets the tokens scheduled to be distributed for a specific cycle.
      */
-    function getTokensForCycle(uint256 _cycleIndex) external view override returns (uint256) {
+    function getTokensForCycle(uint256 _cycleIndex) public view override returns (uint256) {
         return firstCycleDistribution.div(2 ** _cycleIndex);
     }
 
     /**
      * Gets the index of the current cycle.
      */
-    function getCurrentCycle() external view override returns (uint256) {
+    function getCurrentCycle() public view override returns (uint256) {
         return (block.timestamp.sub(distributionStartTime)).div(cycleDuration);
+    }
+
+    function getStartOfCycle(uint256 _cycleIndex) public view override returns (uint256) {
+        return distributionStartTime.add(_cycleIndex.mul(cycleDuration));
+    }
+
+    function getRewardRate(uint256 _cycleIndex) public view override returns (uint256) {
+        return getTokensForCycle(_cycleIndex).div(cycleDuration);
+    }
+
+    function getCurrentRewardRate() external view override returns (uint256) {
+        return getRewardRate(getCurrentCycle());
+    }
+
+    function getStartOfCurrentCycle() external view override returns (uint256) {
+        return getStartOfCycle(getCurrentCycle());
     }
 }

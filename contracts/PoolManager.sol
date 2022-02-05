@@ -91,22 +91,25 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         return (data.isValid, data.isEligible, data.farmAddress, data.unrealizedProfits);
     }
 
-    function getRewardRate() public view override returns (uint256) {
-        uint256 cycleDuration = releaseSchedule.cycleDuration();
-        uint256 cycleIndex = releaseSchedule.getCurrentCycle();
-        uint256 tokensForCycle = releaseSchedule.getTokensForCycle(cycleIndex);
-
-        return tokensForCycle.div(cycleDuration);
-    }
-
     function rewardPerToken() public view override returns (uint256) {
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
+        uint256 startOfCycle = releaseSchedule.getStartOfCurrentCycle();
 
         if (globalPeriods[currentPeriodIndex].totalWeight == 0) {
             return rewardPerTokenStored;
         }
 
-        return rewardPerTokenStored.add((block.timestamp.sub(lastUpdateTime)).mul(getRewardRate()).mul(1e18).div(
+        uint256 availableTokens = 0;
+        // Check for cross-cycle rewards
+        if (lastUpdateTime < startOfCycle) {
+            availableTokens = (startOfCycle.sub(lastUpdateTime)).mul(releaseSchedule.getCurrentRewardRate().mul(2));
+            availableTokens = availableTokens.add((block.timestamp.sub(startOfCycle)).mul(releaseSchedule.getCurrentRewardRate()));
+        }
+        else {
+            availableTokens = (block.timestamp.sub(lastUpdateTime)).mul(releaseSchedule.getCurrentRewardRate());
+        }
+
+        return rewardPerTokenStored.add(availableTokens.mul(1e18).div(
             TradegenMath.scaleByTime(globalPeriods[currentPeriodIndex].totalWeight,
                                     currentPeriodIndex > 0 ? globalPeriods[currentPeriodIndex.sub(1)].totalWeight : 0,
                                     block.timestamp,
