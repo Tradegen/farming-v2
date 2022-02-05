@@ -19,6 +19,11 @@ abstract contract StakingRewardsFactory {
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
+    /**
+     * @dev Creates a farm for the given pool.
+     * @param poolAddress address of the pool.
+     * @return (uint256) address of the newly created farm.
+     */
     function _createFarm(address poolAddress) internal returns(address) {
         require(poolAddress != address(0), "StakingRewardsFactory: invalid address.");
         
