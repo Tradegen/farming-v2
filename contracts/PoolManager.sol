@@ -3,6 +3,7 @@
 
 pragma solidity ^0.8.3;
 
+// OpenZeppelin
 import "./openzeppelin-solidity/contracts/Math.sol";
 import "./openzeppelin-solidity/contracts/SafeMath.sol";
 import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
@@ -47,11 +48,13 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     /* ========== STATE VARIABLES ========== */
 
+    // Configuration 
     uint32 public constant PERIOD_DURATION = 14 days;
     uint256 public constant MINIMUM_POOL_DURATION = 30 days;
     uint256 public constant MINIMUM_NUMBER_OF_INVESTORS = 10;
     uint256 public constant MINIMUM_TOTAL_VALUE_LOCKED = 10 ** 21; // $1,000
 
+    // Contracts
     IERC20 public rewardsToken;
     IReleaseEscrow public releaseEscrow;
     IReleaseSchedule public releaseSchedule;
@@ -82,6 +85,11 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     /* ========== VIEWS ========== */
 
+    /**
+     * @dev Returns the pool info for the given address.
+     * @param poolAddress address of the pool.
+     * @return (bool, bool, address, uint256) whether the pool is valid, whether the pool is eligible for rewards, address of the pool's farm, and the pool's unrealized profits.
+     */
     function getPoolInfo(address poolAddress) external view override returns (bool, bool, address, uint256) {
         require(poolAddress != address(0), "PoolManager: invalid pool address.");
 
@@ -90,6 +98,11 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         return (data.isValid, data.isEligible, data.farmAddress, data.unrealizedProfits);
     }
 
+    /**
+     * @dev Calculates the amount of rewards per "token" a pool has.
+     * @notice For the PoolManager contract, one "token" represents one unit of "weight" (derived from a pool's unrealized profits and token price).
+     * @return (uint256) reward per "token".
+     */
     function rewardPerToken() public view override returns (uint256) {
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
         uint256 startOfCycle = releaseSchedule.getStartOfCurrentCycle();
@@ -116,6 +129,11 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
                                     PERIOD_DURATION)));
     }
 
+    /**
+     * @dev Calculates the amount of unclaimed rewards the pool has available.
+     * @param poolAddress address of the pool.
+     * @return (uint256) amount of available unclaimed rewards.
+     */
     function earned(address poolAddress) public view override returns (uint256) {
         require(poolAddress != address(0), "PoolManager: invalid pool address.");
 
@@ -129,12 +147,23 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
                                     .mul(rewardPerToken().sub(poolRewardPerTokenPaid[poolAddress])).div(1e18).add(rewards[poolAddress]);
     }
 
+    /**
+     * @dev Calculates the period index corresponding to the given timestamp.
+     * @param timestamp timestamp to calculate the period for.
+     * @return (uint256) index of the period to which the timestamp belongs to.
+     */
     function getPeriodIndex(uint256 timestamp) public view returns (uint256) {
         require(timestamp >= lastUpdateTime, "PoolManager: timestamp must be greater than start time.");
 
         return (timestamp.sub(startTime)).div(PERIOD_DURATION);
     }
 
+    /**
+     * @dev Calculates the starting timestamp of the given period.
+     * @notice This function is used for time-scaling a pool's weight.
+     * @param periodIndex index of the period.
+     * @return (uint256) timestamp at which the period started.
+     */
     function getStartOfPeriod(uint256 periodIndex) public view returns (uint256) {
         require(periodIndex >= 0, "PoolManager: period index must be positive.");
 
@@ -143,6 +172,12 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
+    /**
+     * @dev Claims the pool's available rewards.
+     * @notice This function is meant to be called by the pool's farm whenever a user claims their farming rewards.
+     * @param poolAddress address of the pool.
+     * @return (uint256) amount of rewards claimed.
+     */
     function claimLatestRewards(address poolAddress) external override poolIsValid(poolAddress) onlyFarm(poolAddress) updateReward(poolAddress) returns (uint256) {
         uint256 reward = rewards[poolAddress];
 
@@ -151,6 +186,12 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         return reward;
     }
 
+    /**
+     * @dev Updates the pool's weight based on the pool's unrealized profits and change in token price from the last period.
+     * @notice This function is meant to be called by a pool contract at the end of deposit(), withdraw(), and executeTransaction() functions.
+     * @param newUnrealizedProfits the new unrealized profits for the pool, after calling the parent function.
+     * @param poolTokenPrice the current price of the pool's token.
+     */
     function updateWeight(uint256 newUnrealizedProfits, uint256 poolTokenPrice) external override nonReentrant poolIsValid(msg.sender) updateReward(msg.sender) {
         require(newUnrealizedProfits >= 0, "PoolManager: unrealized profits cannot be negative.");
         require(poolTokenPrice > 0, "PoolManager: pool token price must be greater than 0.");
@@ -188,6 +229,12 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         _getReward(msg.sender);
     }
 
+    /**
+     * @dev Registers a pool in the farming system.
+     * @notice This function is meant to be called by the PoolFactory contract when creating a pool.
+     * @param poolAddress address of the pool.
+     * @param seedPrice initial price of the pool.
+     */
     function registerPool(address poolAddress, uint256 seedPrice) external override onlyPoolFactory {
         require(poolAddress != address(0), "PoolManager: invalid pool address.");
         require(seedPrice > 0, "PoolManager: seed price must be greater than 0.");
@@ -209,6 +256,14 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         emit RegisteredPool(poolAddress, farmAddress);
     }
 
+    /**
+     * @dev Marks a pool as eligible for farming rewards, if it meets the minimum criteria.
+     * @notice This function is meant to be called by a pool contract, from the pool's owner.
+     * @param createdOn timestamp when the pool was created.
+     * @param totalValueLocked current value of the pool in USD.
+     * @param numberOfInvestors number of unique investors in the pool.
+     * @return (bool) whether the pool was marked as eligible.
+     */
     function markPoolAsEligible(uint32 createdOn, uint256 totalValueLocked, uint256 numberOfInvestors) external override poolIsValid(msg.sender) returns (bool) {
         require(createdOn >= 0, "PoolManager: timestamp must be positive.");
         require(totalValueLocked >= 0, "PoolManager: total value locked must be positive.");
@@ -235,6 +290,10 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
+    /**
+     * @dev Withdraws available tokens from the ReleaseEscrow contract and transfers the pool's share of those rewards to the pool's farm.
+     * @param poolAddress address of the pool.
+     */
     function _getReward(address poolAddress) internal {
         releaseEscrow.withdraw();
 
@@ -248,14 +307,22 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         }
     }
 
+    /**
+     * @dev Calculates the pool's weight.
+     * @notice The weight is calculated by [sqrt(1000 * averagePriceChange) * (log2(unrealizedProfits))^2]
+     * @notice Average price change is the difference between latest price and previous price, divided by the number of periods between the two prices.
+     * @param poolAddress address of the pool.
+     * @return (uint256) weight of the pool.
+     */
     function _calculatePoolWeight(address poolAddress) internal view returns (uint256) {
         PoolInfo memory data = pools[poolAddress];
 
+        // Return early if the pool's token has declined in price.
         if (data.latestRecordedPrice <= data.previousRecordedPrice) {
             return 0;
         }
 
-        // Weight is scaled by 1000x
+        // Average price change is scaled by 1000x to preserve fractional percent changes.
         uint256 averagePriceChange = (data.latestRecordedPrice.sub(data.previousRecordedPrice)).mul(1e18).div(data.previousRecordedPrice).div(data.latestRecordedPeriodIndex.sub(data.previousRecordedPeriodIndex));
         return uint256(TradegenMath.sqrt(averagePriceChange.div(1e15))).mul(TradegenMath.log(data.unrealizedProfits.div(1e18)) ** 2);
     }
