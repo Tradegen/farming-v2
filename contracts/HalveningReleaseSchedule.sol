@@ -32,31 +32,52 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
     /* ========== VIEWS ========== */
 
     /**
-     * Gets the tokens scheduled to be distributed for a specific cycle.
+     * @dev Returns the total number of tokens that will be released in the given cycle.
+     * @param _cycleIndex index of the cycle to check.
+     * @return (uint256) total number of tokens released during the given cycle.
      */
     function getTokensForCycle(uint256 _cycleIndex) public view override returns (uint256) {
         return firstCycleDistribution.div(2 ** _cycleIndex);
     }
 
     /**
-     * Gets the index of the current cycle.
+     * @dev Returns the index of the current cycle.
+     * @return (uint256) index of the current cycle.
      */
     function getCurrentCycle() public view override returns (uint256) {
         return (block.timestamp.sub(distributionStartTime)).div(cycleDuration);
     }
 
+    /**
+     * @dev Returns the starting timestamp of the given cycle.
+     * @param _cycleIndex index of the cycle to check.
+     * @return (uint256) starting timestamp of the cycle.
+     */
     function getStartOfCycle(uint256 _cycleIndex) public view override returns (uint256) {
         return distributionStartTime.add(_cycleIndex.mul(cycleDuration));
     }
 
+    /**
+     * @dev Given the index of a cycle, returns the number of tokens unlocked per second during the cycle.
+     * @param _cycleIndex index of the cycle to check.
+     * @return (uint256) number of tokens per second.
+     */
     function getRewardRate(uint256 _cycleIndex) public view override returns (uint256) {
         return getTokensForCycle(_cycleIndex).div(cycleDuration);
     }
 
+    /**
+     * @dev Returns the number of tokens unlocked per second in the current cycle.
+     * @return (uint256) number of tokens per second.
+     */
     function getCurrentRewardRate() external view override returns (uint256) {
         return getRewardRate(getCurrentCycle());
     }
 
+    /**
+     * @dev Returns the starting timestamp of the currenet cycle.
+     * @return (uint256) starting timestamp.
+     */
     function getStartOfCurrentCycle() external view override returns (uint256) {
         return getStartOfCycle(getCurrentCycle());
     }
