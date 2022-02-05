@@ -6,9 +6,9 @@ pragma solidity ^0.8.3;
 import "./openzeppelin-solidity/contracts/Math.sol";
 import "./openzeppelin-solidity/contracts/SafeMath.sol";
 import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
-import "./openzeppelin-solidity/contracts/SafeERC20.sol";
-import "./openzeppelin-solidity/contracts/IERC1155.sol";
-import "./openzeppelin-solidity/contracts/ERC1155Holder.sol";
+import "./openzeppelin-solidity/contracts/ERC20/SafeERC20.sol";
+import "./openzeppelin-solidity/contracts/ERC1155/IERC1155.sol";
+import "./openzeppelin-solidity/contracts/ERC1155/ERC1155Holder.sol";
 
 // Inheritance
 import "./interfaces/IStakingRewards.sol";

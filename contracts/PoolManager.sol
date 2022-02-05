@@ -6,7 +6,7 @@ pragma solidity ^0.8.3;
 import "./openzeppelin-solidity/contracts/Math.sol";
 import "./openzeppelin-solidity/contracts/SafeMath.sol";
 import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
-import "./openzeppelin-solidity/contracts/SafeERC20.sol";
+import "./openzeppelin-solidity/contracts/ERC20/SafeERC20.sol";
 
 // Inheritance
 import "./interfaces/IPoolManager.sol";
@@ -36,7 +36,6 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
     }
 
     struct GlobalPeriodInfo {
-        uint256 totalUnrealizedProfits;
         uint256 totalWeight;
     }
 
@@ -123,10 +122,11 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
 
         return TradegenMath.scaleByTime(poolPeriods[poolAddress][currentPeriodIndex].weight,
-                                    currentPeriodIndex > 0 ? poolPeriods[poolAddress][currentPeriodIndex.sub(1)].weight : 0,
-                                    block.timestamp,
-                                    getStartOfPeriod(currentPeriodIndex),
-                                    PERIOD_DURATION).mul(rewardPerToken().sub(poolRewardPerTokenPaid[poolAddress])).div(1e18).add(rewards[poolAddress]);
+                                        currentPeriodIndex > 0 ? poolPeriods[poolAddress][currentPeriodIndex.sub(1)].weight : 0,
+                                        block.timestamp,
+                                        getStartOfPeriod(currentPeriodIndex),
+                                        PERIOD_DURATION)
+                                    .mul(rewardPerToken().sub(poolRewardPerTokenPaid[poolAddress])).div(1e18).add(rewards[poolAddress]);
     }
 
     function getPeriodIndex(uint256 timestamp) public view returns (uint256) {
@@ -156,7 +156,6 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         require(poolTokenPrice > 0, "PoolManager: pool token price must be greater than 0.");
 
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
-        uint256 currentUnrealizedProfits = pools[msg.sender].unrealizedProfits;
         uint256 currentPoolWeight = poolPeriods[msg.sender][currentPeriodIndex].weight;
 
         // Update pool info
@@ -183,7 +182,6 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
         // Update global info for current period
         globalPeriods[currentPeriodIndex] = GlobalPeriodInfo({
-            totalUnrealizedProfits: globalPeriods[currentPeriodIndex].totalUnrealizedProfits.sub(currentUnrealizedProfits).add(newUnrealizedProfits),
             totalWeight: globalPeriods[currentPeriodIndex].totalWeight.sub(currentPoolWeight).add(newPoolWeight)
         });
 
