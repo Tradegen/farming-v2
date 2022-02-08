@@ -152,7 +152,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
      * @param timestamp timestamp to calculate the period for.
      * @return (uint256) index of the period to which the timestamp belongs to.
      */
-    function getPeriodIndex(uint256 timestamp) public view returns (uint256) {
+    function getPeriodIndex(uint256 timestamp) public view override returns (uint256) {
         require(timestamp >= lastUpdateTime, "PoolManager: timestamp must be greater than start time.");
 
         return (timestamp.sub(startTime)).div(PERIOD_DURATION);
@@ -164,7 +164,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
      * @param periodIndex index of the period.
      * @return (uint256) timestamp at which the period started.
      */
-    function getStartOfPeriod(uint256 periodIndex) public view returns (uint256) {
+    function getStartOfPeriod(uint256 periodIndex) public view override returns (uint256) {
         require(periodIndex >= 0, "PoolManager: period index must be positive.");
 
         return startTime.add(periodIndex.mul(PERIOD_DURATION));

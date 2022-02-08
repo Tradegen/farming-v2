@@ -42,6 +42,7 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
         rewardToken = IERC20(rewardToken_);
         schedule = IReleaseSchedule(schedule_);
         startTime = startTime_;
+        lastWithdrawalTime = schedule.getStartOfCurrentCycle();
     }
 
     /* ========== VIEWS ========== */

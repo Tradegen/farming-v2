@@ -24,8 +24,8 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
     /**
      * @param firstCycleDistribution_ Number of tokens to distribute in the first cycle.
      */
-    constructor(uint256 firstCycleDistribution_) {
-        distributionStartTime = block.timestamp;
+    constructor(uint256 firstCycleDistribution_, uint256 startTime_) {
+        distributionStartTime = startTime_;
         firstCycleDistribution = firstCycleDistribution_;
     }
 
@@ -37,7 +37,7 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
      * @return (uint256) total number of tokens released during the given cycle.
      */
     function getTokensForCycle(uint256 _cycleIndex) public view override returns (uint256) {
-        return firstCycleDistribution.div(2 ** _cycleIndex);
+        return ((block.timestamp >= distributionStartTime) && (_cycleIndex > 0)) ? firstCycleDistribution.div(2 ** _cycleIndex.sub(1)) : 0;
     }
 
     /**
@@ -45,7 +45,7 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
      * @return (uint256) index of the current cycle.
      */
     function getCurrentCycle() public view override returns (uint256) {
-        return (block.timestamp.sub(distributionStartTime)).div(cycleDuration);
+        return (block.timestamp >= distributionStartTime) ? ((block.timestamp.sub(distributionStartTime)).div(cycleDuration)).add(1) : 0;
     }
 
     /**
@@ -54,7 +54,7 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
      * @return (uint256) starting timestamp of the cycle.
      */
     function getStartOfCycle(uint256 _cycleIndex) public view override returns (uint256) {
-        return distributionStartTime.add(_cycleIndex.mul(cycleDuration));
+        return ((block.timestamp >= distributionStartTime) && (_cycleIndex > 0)) ? distributionStartTime.add((_cycleIndex.sub(1)).mul(cycleDuration)) : 0;
     }
 
     /**
