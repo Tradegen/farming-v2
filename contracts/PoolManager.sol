@@ -107,7 +107,9 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
         uint256 startOfCycle = releaseSchedule.getStartOfCurrentCycle();
 
-        if (globalPeriods[currentPeriodIndex].totalWeight == 0) {
+        if (globalPeriods[currentPeriodIndex].totalWeight == 0 &&
+            currentPeriodIndex > 0 &&
+            globalPeriods[currentPeriodIndex.sub(1)].totalWeight == 0) {
             return rewardPerTokenStored;
         }
 
@@ -153,7 +155,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
      * @return (uint256) index of the period to which the timestamp belongs to.
      */
     function getPeriodIndex(uint256 timestamp) public view override returns (uint256) {
-        require(timestamp >= lastUpdateTime, "PoolManager: timestamp must be greater than start time.");
+        require(timestamp >= startTime, "PoolManager: timestamp must be greater than start time.");
 
         return (timestamp.sub(startTime)).div(PERIOD_DURATION);
     }
@@ -237,6 +239,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
      */
     function registerPool(address poolAddress, uint256 seedPrice) external override onlyPoolFactory {
         require(poolAddress != address(0), "PoolManager: invalid pool address.");
+        require(!pools[poolAddress].isValid, "PoolManager: pool already exists.");
         require(seedPrice > 0, "PoolManager: seed price must be greater than 0.");
 
         address farmAddress = _createFarm(msg.sender);
@@ -319,6 +322,16 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
         // Return early if the pool's token has declined in price.
         if (data.latestRecordedPrice <= data.previousRecordedPrice) {
+            return 0;
+        }
+
+        // Prevent division by 0
+        if (data.previousRecordedPrice == 0) {
+            return 0;
+        }
+
+        // Prevent division by 0 or negative values
+        if (data.previousRecordedPeriodIndex >= data.latestRecordedPeriodIndex) {
             return 0;
         }
 
