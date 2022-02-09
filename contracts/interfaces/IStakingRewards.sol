@@ -32,17 +32,15 @@ interface IStakingRewards {
      * @dev Stakes tokens of the given class in the farm.
      * @param amount number of tokens to stake.
      * @param tokenClass class of the token (in range [1, 4] depending on the scarcity).
-     * @param poolID ID of the pool; used for calculating the pool's token ID.
      */
-    function stake(uint256 amount, uint256 tokenClass, uint256 poolID) external;
+    function stake(uint256 amount, uint256 tokenClass) external;
 
     /**
      * @dev Withdraws tokens of the given class from the farm.
      * @param amount number of tokens to stake.
      * @param tokenClass class of the token (in range [1, 4] depending on the scarcity).
-     * @param poolID ID of the pool; used for calculating the pool's token ID.
      */
-    function withdraw(uint256 amount, uint256 tokenClass, uint256 poolID) external;
+    function withdraw(uint256 amount, uint256 tokenClass) external;
 
     /**
      * @dev Claims available rewards for the user.
@@ -52,9 +50,8 @@ interface IStakingRewards {
 
     /**
      * @dev Withdraws all tokens a user has staked for each token class.
-     * @param poolID ID of the pool; used for calculating the pool's token ID.
      */
-    function exit(uint256 poolID) external;
+    function exit() external;
 
     // Restricted
 

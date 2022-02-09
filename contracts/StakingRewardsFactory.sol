@@ -9,12 +9,10 @@ abstract contract StakingRewardsFactory {
 
     address public poolManager;
     address public rewardToken;
-    address public stakingToken;
 
-    constructor(address _poolManager, address _rewardToken, address _stakingToken) {
+    constructor(address _poolManager, address _rewardToken) {
         poolManager = _poolManager;
         rewardToken = _rewardToken;
-        stakingToken = _stakingToken;
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
@@ -28,7 +26,7 @@ abstract contract StakingRewardsFactory {
         require(poolAddress != address(0), "StakingRewardsFactory: invalid address.");
         
         //Create farm
-        address farmAddress = address(new StakingRewards(poolManager, rewardToken, stakingToken, poolAddress));
+        address farmAddress = address(new StakingRewards(poolManager, rewardToken, poolAddress));
 
         return farmAddress;
     }

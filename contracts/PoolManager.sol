@@ -73,8 +73,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _rewardsToken, address _releaseEscrow, address _releaseSchedule, address _poolFactory, address _stakingToken)
-        StakingRewardsFactory(address(this), _rewardsToken, _stakingToken) {
+    constructor(address _rewardsToken, address _releaseEscrow, address _releaseSchedule, address _poolFactory)
+        StakingRewardsFactory(address(this), _rewardsToken) {
             rewardsToken = IERC20(_rewardsToken);
             releaseEscrow = IReleaseEscrow(_releaseEscrow);
             releaseSchedule = IReleaseSchedule(_releaseSchedule);

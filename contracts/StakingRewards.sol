@@ -42,9 +42,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _poolManager, address _rewardsToken, address _stakingToken, address _poolAddress) {
+    constructor(address _poolManager, address _rewardsToken, address _poolAddress) {
         rewardsToken = IERC20(_rewardsToken);
-        stakingToken = IERC1155(_stakingToken);
+        stakingToken = IERC1155(_poolAddress);
         poolManager = IPoolManager(_poolManager);
         poolAddress = _poolAddress;
     }
@@ -78,13 +78,11 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
      * @dev Stakes tokens of the given class in the farm.
      * @param amount number of tokens to stake.
      * @param tokenClass class of the token (in range [1, 4] depending on the scarcity).
-     * @param poolID ID of the pool; used for calculating the pool's token ID.
      */
-    function stake(uint256 amount, uint256 tokenClass, uint256 poolID) external override nonReentrant updateReward(msg.sender) {
+    function stake(uint256 amount, uint256 tokenClass) external override nonReentrant updateReward(msg.sender) {
         require(amount > 0, "StakingRewards: Amount must be positive.");
-        require(poolID > 0, "StakingRewards: Pool ID must be greater than 0.");
         require(tokenClass > 0 && tokenClass < 5, "StakingRewards: Token class must be between 1 and 4");
-        require(stakingToken.balanceOf(msg.sender, poolID.mul(4).add(tokenClass)) >= amount, "StakingRewards: Not enough tokens");
+        require(stakingToken.balanceOf(msg.sender, tokenClass) >= amount, "StakingRewards: Not enough tokens");
 
         uint256 weightedAmount = amount.mul(WEIGHTS[tokenClass - 1]);
         totalSupply = totalSupply.add(amount);
@@ -92,7 +90,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
         _weightedBalance[msg.sender] = _weightedBalance[msg.sender].add(weightedAmount);
         _balances[msg.sender][tokenClass - 1] = _balances[msg.sender][tokenClass - 1].add(amount);
 
-        stakingToken.safeTransferFrom(msg.sender, address(this), (poolID.mul(4)).add(tokenClass), amount, "0x0");
+        stakingToken.safeTransferFrom(msg.sender, address(this), tokenClass, amount, "0x0");
 
         emit Staked(msg.sender, tokenClass, amount);
     }
@@ -101,11 +99,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
      * @dev Withdraws tokens of the given class from the farm.
      * @param amount number of tokens to stake.
      * @param tokenClass class of the token (in range [1, 4] depending on the scarcity).
-     * @param poolID ID of the pool; used for calculating the pool's token ID.
      */
-    function withdraw(uint256 amount, uint256 tokenClass, uint256 poolID) public override nonReentrant updateReward(msg.sender) {
+    function withdraw(uint256 amount, uint256 tokenClass) public override nonReentrant updateReward(msg.sender) {
         require(amount > 0, "StakingRewards: Amount must be positive.");
-        require(poolID > 0, "StakingRewards: Pool ID must be greater than 0.");
         require(tokenClass > 0 && tokenClass < 5, "StakingRewards: Token class must be between 1 and 4");
 
         uint256 weightedAmount = amount.mul(WEIGHTS[tokenClass - 1]);
@@ -115,7 +111,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
         _balances[msg.sender][tokenClass - 1] = _balances[msg.sender][tokenClass - 1].sub(amount);
 
         stakingToken.setApprovalForAll(msg.sender, true);
-        stakingToken.safeTransferFrom(address(this), msg.sender, (poolID.mul(4)).add(tokenClass), amount, "0x0");
+        stakingToken.safeTransferFrom(address(this), msg.sender, tokenClass, amount, "0x0");
 
         emit Withdrawn(msg.sender, tokenClass, amount);
     }
@@ -131,14 +127,13 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
 
     /**
      * @dev Withdraws all tokens a user has staked for each token class.
-     * @param poolID ID of the pool; used for calculating the pool's token ID.
      */
-    function exit(uint256 poolID) external override {
+    function exit() external override {
         for (uint i = 0; i < 4; i++)
         {
             if (_balances[msg.sender][i] > 0)
             {
-                withdraw(_balances[msg.sender][i], i.add(1), poolID);
+                withdraw(_balances[msg.sender][i], i.add(1));
             }
         }
         
