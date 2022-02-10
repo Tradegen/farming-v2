@@ -28,7 +28,7 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
     address public immutable beneficiary;
 
     // Schedule for release of tokens.
-    IReleaseSchedule public immutable schedule;
+    IReleaseSchedule public schedule;
 
     // Timestamp of the last withdrawal.
     uint256 public lastWithdrawalTime;
