@@ -7,3 +7,4 @@ build/artifacts
 build/cache
 .env
 package-lock.json
+yarn.lock
