@@ -13,7 +13,8 @@
   "scripts": {
     "build": "hardhat compile && npm run",
     "console": "hardhat console",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "slither": "slither --exclude-dependencies --exclude-informational --exclude-low --exclude-medium --exclude=arbitrary-send --filter-paths=PoolManager.sol ."
   },
   "devDependencies": {
     "@celo/contractkit": "^1.1.0",
