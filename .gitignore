@@ -6,5 +6,4 @@ node_modules
 build/artifacts
 build/cache
 .env
-yarn.lock
 package-lock.json
