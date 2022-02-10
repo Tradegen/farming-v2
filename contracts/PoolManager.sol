@@ -206,6 +206,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
             pools[msg.sender].previousRecordedPrice = pools[msg.sender].latestRecordedPrice;
             pools[msg.sender].previousRecordedPeriodIndex = pools[msg.sender].latestRecordedPeriodIndex; 
         }
+        
         pools[msg.sender].unrealizedProfits = newUnrealizedProfits;
         pools[msg.sender].latestRecordedPrice = poolTokenPrice;
         pools[msg.sender].latestRecordedPeriodIndex = currentPeriodIndex;
