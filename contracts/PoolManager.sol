@@ -338,7 +338,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         // Average price change is scaled by 1000x to preserve fractional percent changes.
         uint256 averagePriceChange = (data.latestRecordedPrice.sub(data.previousRecordedPrice)).mul(1e18)
                                         .div(data.previousRecordedPrice)
-                                        .div(data.latestRecordedPeriodIndex.sub(data.previousRecordedPeriodIndex));
+                                        .div((data.latestRecordedPeriodIndex == data.previousRecordedPeriodIndex)
+                                                ? 1 : data.latestRecordedPeriodIndex.sub(data.previousRecordedPeriodIndex));
         return uint256(TradegenMath.sqrt(averagePriceChange.div(1e15)))
                         .mul(TradegenMath.log(data.unrealizedProfits.div(1e18)) ** 2);
     }
