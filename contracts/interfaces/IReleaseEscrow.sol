@@ -12,6 +12,21 @@ interface IReleaseEscrow {
     function hasStarted() external view returns (bool);
 
     /**
+     * Returns the total number of tokens that will be distributed.
+     */
+    function lifetimeRewards() external view returns (uint256);
+
+    /**
+     * Returns the number of tokens left to distribute.
+     */
+    function remainingRewards() external view returns (uint256);
+
+    /**
+     * Returns the number of tokens distributed so far.
+     */
+    function distributedRewards() external view returns (uint256);
+
+    /**
      * Withdraws tokens based on the current reward rate and the time since last withdrawal.
      *
      * @notice The tokens received represent rewards earned across all pools. The PoolManager contract handles the logic

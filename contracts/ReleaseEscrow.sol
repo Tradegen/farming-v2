@@ -21,20 +21,26 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
     // When the release starts.
     uint256 public immutable startTime;
 
-    // Reward token contract address
+    // Reward token contract address.
     IERC20 public immutable rewardToken;
 
     // Where the funds go to.
     address public immutable beneficiary;
 
     // Schedule for release of tokens.
-    IReleaseSchedule public schedule;
+    IReleaseSchedule public immutable schedule;
 
     // Timestamp of the last withdrawal.
     uint256 public lastWithdrawalTime;
 
+    // Total number of tokens that will be distributed.
+    uint256 public override lifetimeRewards;
+
     /* ========== CONSTRUCTOR ========== */
 
+    /**
+     * @notice Release Schedule must have the same start time. 
+     */
     constructor(address beneficiary_, address rewardToken_, address schedule_, uint256 startTime_) {
         require(startTime_ > block.timestamp, "ReleaseEscrow: start time must be in the future");
 
@@ -42,7 +48,8 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
         rewardToken = IERC20(rewardToken_);
         schedule = IReleaseSchedule(schedule_);
         startTime = startTime_;
-        lastWithdrawalTime = schedule.getStartOfCurrentCycle();
+        lastWithdrawalTime = IReleaseSchedule(schedule_).getStartOfCurrentCycle();
+        lifetimeRewards = IERC20(rewardToken_).balanceOf(address(this));
     }
 
     /* ========== VIEWS ========== */
@@ -54,6 +61,20 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
         return startTime < block.timestamp;
     }
 
+    /**
+     * Returns the number of tokens left to distribute.
+     */
+    function remainingRewards() external view override returns (uint256) {
+        return rewardToken.balanceOf(address(this));
+    }
+
+    /**
+     * Returns the number of tokens distributed so far.
+     */
+    function distributedRewards() external view override returns (uint256) {
+        return lifetimeRewards.sub(rewardToken.balanceOf(address(this)));
+    }
+
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
@@ -61,7 +82,7 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
      *
      * @notice The tokens received represent rewards earned across all pools. The PoolManager contract handles the logic
      *          for partitioning rewards based on a specific pool's weight.
-     * @notice This function is called by the PoolManager contract whenever a user claims rewards for a given pool.
+     * @notice This function is called by the PoolManager contract whenever a user claims rewards for a specific pool.
      */
     function withdraw() external override started onlyBeneficiary nonReentrant {
         uint256 startOfCycle = schedule.getStartOfCurrentCycle();
