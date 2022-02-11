@@ -13,12 +13,19 @@ require("hardhat-gas-reporter");
 const { removeConsoleLog } = require("hardhat-preprocessor");
 require("hardhat-spdx-license-identifier");
 
+const accounts = {
+  mnemonic:
+    process.env.MNEMONIC ||
+    "test test test test test test test test test test test junk",
+  path: "m/44'/52752'/0'/0/",
+};
+
 module.exports = {
   abiExporter: {
     path: "./build/abi",
     flat: true,
   },
-  defaultNetwork: "alfajores",
+  defaultNetwork: "hardhat",
   gasReporter: {
     enabled: process.env.REPORT_GAS ? true : false,
     currency: "USD"
@@ -39,6 +46,10 @@ module.exports = {
       live: true,
       gasPrice: 2 * 10 ** 8,
       gas: 8000000,
+    },
+    hardhat: {
+      chainId: 31337,
+      accounts,
     }
   },
   paths: {
