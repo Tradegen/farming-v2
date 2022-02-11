@@ -38,7 +38,7 @@ describe("ReleaseEscrow", () => {
 
     ScheduleFactory = await ethers.getContractFactory('HalveningReleaseSchedule');
     RewardTokenFactory = await ethers.getContractFactory('TestTokenERC20');
-    ReleaseEscrowFactory = await ethers.getContractFactory('ReleaseEscrow');
+    ReleaseEscrowFactory = await ethers.getContractFactory('TestReleaseEscrow');
 
     startTimeCurrent = Math.floor(Date.now() / 1000) - 100;
     startTimeOld = Math.floor(Date.now() / 1000) - WEEKS_27;
@@ -73,41 +73,53 @@ describe("ReleaseEscrow", () => {
     releaseEscrowFutureAddress = releaseEscrowFuture.address;
 
     // Transfer tokens to ReleaseEscrowCurrent
-    let tx = await rewardToken.approve(releaseEscrowCurrentAddress, CYCLE_DURATION * 4);
+    let tx = await rewardToken.approve(releaseEscrowCurrentAddress, CYCLE_DURATION * 8);
     await tx.wait();
-    let tx2 = await rewardToken.transfer(releaseEscrowCurrentAddress, CYCLE_DURATION * 4);
+    let tx2 = await rewardToken.transfer(releaseEscrowCurrentAddress, CYCLE_DURATION * 8);
     await tx2.wait();
 
     // Transfer tokens to ReleaseEscrowOld
-    let tx3 = await rewardToken.approve(releaseEscrowOldAddress, CYCLE_DURATION * 4);
+    let tx3 = await rewardToken.approve(releaseEscrowOldAddress, CYCLE_DURATION * 8);
     await tx3.wait();
-    let tx4 = await rewardToken.transfer(releaseEscrowOldAddress, CYCLE_DURATION * 4);
+    let tx4 = await rewardToken.transfer(releaseEscrowOldAddress, CYCLE_DURATION * 8);
     await tx4.wait();
 
     // Transfer tokens to ReleaseEscrowFuture
-    let tx5 = await rewardToken.approve(releaseEscrowFutureAddress, CYCLE_DURATION * 4);
+    let tx5 = await rewardToken.approve(releaseEscrowFutureAddress, CYCLE_DURATION * 8);
     await tx5.wait();
-    let tx6 = await rewardToken.transfer(releaseEscrowFutureAddress, CYCLE_DURATION * 4);
+    let tx6 = await rewardToken.transfer(releaseEscrowFutureAddress, CYCLE_DURATION * 8);
     await tx6.wait();
   });
   
   describe("#data", () => {
     it("lifetime rewards", async () => {
-        const rewards = await releaseEscrowFuture.lifetimeRewards();
+        const rewards = await releaseEscrowOld.lifetimeRewards();
 
-        expect(rewards).to.equal(CYCLE_DURATION * 4);
+        expect(rewards).to.equal(CYCLE_DURATION * 8);
     });
 
     it("distributed rewards", async () => {
-        const rewards = await releaseEscrowFuture.distributedRewards();
+        const rewards = await releaseEscrowOld.distributedRewards();
 
         expect(rewards).to.equal(0);
     });
 
     it("remaining rewards", async () => {
-        const rewards = await releaseEscrowFuture.remainingRewards();
+        const rewards = await releaseEscrowOld.remainingRewards();
 
-        expect(rewards).to.equal(CYCLE_DURATION * 4);
+        expect(rewards).to.equal(CYCLE_DURATION * 8);
+    });
+
+    it("released rewards", async () => {
+        const rewards = await releaseEscrowOld.releasedRewards();
+
+        expect(rewards).to.equal(0);
+    });
+
+    it("unclaimed rewards", async () => {
+        const rewards = await releaseEscrowOld.unclaimedRewards();
+
+        expect(rewards).to.equal(0);
     });
   });
 });

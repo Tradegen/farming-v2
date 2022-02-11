@@ -36,6 +36,9 @@ contract TestReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
     // Total number of tokens that will be distributed.
     uint256 public override lifetimeRewards;
 
+    // Number of tokens that have been claimed.
+    uint256 public override distributedRewards;
+
     /* ========== CONSTRUCTOR ========== */
 
     /**
@@ -47,7 +50,7 @@ contract TestReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
         schedule = IReleaseSchedule(schedule_);
         startTime = startTime_;
         lastWithdrawalTime = IReleaseSchedule(schedule_).getStartOfCurrentCycle();
-        lifetimeRewards = IERC20(rewardToken_).balanceOf(address(this));
+        lifetimeRewards = IReleaseSchedule(schedule_).getTokensForCycle(1).mul(2);
     }
 
     /* ========== VIEWS ========== */
@@ -67,10 +70,17 @@ contract TestReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
     }
 
     /**
-     * Returns the number of tokens distributed so far.
+     * Returns the number of tokens that have vested based on a schedule.
      */
-    function distributedRewards() external view override returns (uint256) {
+    function releasedRewards() public view override returns (uint256) {
         return lifetimeRewards.sub(rewardToken.balanceOf(address(this)));
+    }
+
+    /**
+     * Returns the number of vested tokens that have not been claimed yet.
+     */
+    function unclaimedRewards() external view override returns (uint256) {
+        return releasedRewards().sub(distributedRewards);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -100,6 +110,7 @@ contract TestReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
         }
         
         lastWithdrawalTime = block.timestamp;
+        distributedRewards = distributedRewards.add(availableTokens);
         rewardToken.safeTransfer(beneficiary, availableTokens);
     }
 

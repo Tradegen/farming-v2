@@ -27,6 +27,16 @@ interface IReleaseEscrow {
     function distributedRewards() external view returns (uint256);
 
     /**
+     * Returns the number of tokens that have vested based on a schedule.
+     */
+    function releasedRewards() external view returns (uint256);
+
+    /**
+     * Returns the number of vested tokens that have not been claimed yet.
+     */
+    function unclaimedRewards() external view returns (uint256);
+
+    /**
      * Withdraws tokens based on the current reward rate and the time since last withdrawal.
      *
      * @notice The tokens received represent rewards earned across all pools. The PoolManager contract handles the logic
