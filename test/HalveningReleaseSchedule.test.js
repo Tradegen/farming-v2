@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-
+/*
 describe("HalveningReleaseSchedule", () => {
   let deployer;
   let otherUser;
@@ -20,9 +20,6 @@ describe("HalveningReleaseSchedule", () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     otherUser = signers[1];
-
-    console.log(deployer.address);
-    console.log(otherUser.address);
 
     ScheduleFactory = await ethers.getContractFactory('HalveningReleaseSchedule');
 
@@ -127,4 +124,4 @@ describe("HalveningReleaseSchedule", () => {
         expect(start).to.equal(startTimeOld + CYCLE_DURATION);
     });
   });
-});
+});*/
