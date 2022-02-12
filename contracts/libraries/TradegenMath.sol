@@ -18,14 +18,17 @@ library TradegenMath {
     * @return time-scaled value.
     */
     function scaleByTime(uint256 currentValue, uint256 previousValue, uint256 currentTimestamp, uint256 startTimestamp, uint256 duration) internal pure returns (uint256) {
+        // Prevent division by 0
         if (duration == 0) {
             return 0;
         }
 
+        // Prevent underflow
         if (startTimestamp > currentTimestamp) {
             return 0;
         }
 
+        // Prevent underflow
         if (duration + startTimestamp < currentTimestamp) {
             return 0;
         }
@@ -39,9 +42,7 @@ library TradegenMath {
     * @return result log2(x) unsigned 256-bit integer number.
     */
     function log(uint256 x) internal pure returns (uint256 result) {
-        if (x == 0) return 0;
-
-        result = 1;
+        result = 0;
 
         while (x > 1) {
             if (x >= 2**128) { x >>= 128; result += 128; }
