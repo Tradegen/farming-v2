@@ -49,7 +49,7 @@ contract TestReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
         rewardToken = IERC20(rewardToken_);
         schedule = IReleaseSchedule(schedule_);
         startTime = startTime_;
-        lastWithdrawalTime = IReleaseSchedule(schedule_).getStartOfCurrentCycle();
+        lastWithdrawalTime = IReleaseSchedule(schedule_).getStartOfCycle(1);
         lifetimeRewards = IReleaseSchedule(schedule_).getTokensForCycle(1).mul(2);
     }
 
@@ -96,9 +96,14 @@ contract TestReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
      *          for partitioning rewards based on a specific pool's weight.
      * @notice This function is called by the PoolManager contract whenever a user claims rewards for a specific pool.
      */
-    function withdraw() external override started onlyBeneficiary nonReentrant {
+    function withdraw() external override onlyBeneficiary nonReentrant {
         uint256 startOfCycle = schedule.getStartOfCurrentCycle();
         uint256 availableTokens = 0;
+
+        // Return early if rewards have not started yet.
+        if (!hasStarted()) {
+            return;
+        }
 
         // Check for cross-cycle rewards
         if (lastWithdrawalTime < startOfCycle) {

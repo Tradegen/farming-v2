@@ -122,4 +122,111 @@ describe("ReleaseEscrow", () => {
         expect(rewards).to.equal(0);
     });
   });
+
+  describe("#withdraw", () => {
+    it("before cycle starts", async () => {
+        const initialTokenBalance = await rewardToken.balanceOf(otherUser.address);
+
+        let tx = await releaseEscrowFuture.connect(otherUser).withdraw();
+        await tx.wait();
+
+        const newTokenBalance = await rewardToken.balanceOf(otherUser.address);
+        expect(initialTokenBalance).to.equal(newTokenBalance);
+
+        const distributedRewards = await releaseEscrowFuture.distributedRewards();
+        expect(distributedRewards).to.equal(0);
+
+        const lastWithdrawalTime = await releaseEscrowFuture.lastWithdrawalTime();
+        expect(lastWithdrawalTime).to.equal(startTimeFuture);
+
+        const remainingRewards = await releaseEscrowFuture.remainingRewards();
+        expect(remainingRewards).to.equal(CYCLE_DURATION * 8);
+
+        const releasedRewards = await releaseEscrowFuture.releasedRewards();
+        expect(releasedRewards).to.equal(0);
+
+        const unclaimedRewards = await releaseEscrowFuture.unclaimedRewards();
+        expect(unclaimedRewards).to.equal(0);
+    });
+
+    it("100 seconds after first cycle starts", async () => {
+      const initialTokenBalance = await rewardToken.balanceOf(otherUser.address);
+
+      let tx = await releaseEscrowCurrent.connect(otherUser).withdraw();
+      await tx.wait();
+
+      const lastWithdrawalTime = await releaseEscrowCurrent.lastWithdrawalTime();
+      const elapsedTime = Number(lastWithdrawalTime) - startTimeCurrent;
+      const expectedTokensReceived = 4 * elapsedTime;
+
+      const newTokenBalance = await rewardToken.balanceOf(otherUser.address);
+      console.log(Number(newTokenBalance));
+      expect(Number(newTokenBalance)).to.equal(Number(initialTokenBalance) + expectedTokensReceived);
+
+      const distributedRewards = await releaseEscrowCurrent.distributedRewards();
+      expect(distributedRewards).to.equal(expectedTokensReceived);
+
+      const remainingRewards = await releaseEscrowCurrent.remainingRewards();
+      expect(remainingRewards).to.equal((CYCLE_DURATION * 8) - expectedTokensReceived);
+
+      const releasedRewards = await releaseEscrowCurrent.releasedRewards();
+      expect(releasedRewards).to.equal(expectedTokensReceived);
+
+      const unclaimedRewards = await releaseEscrowCurrent.unclaimedRewards();
+      expect(unclaimedRewards).to.equal(0);
+    });
+
+    it("1 week after second cycle starts; receive cross-cycle rewards", async () => {
+      const initialTokenBalance = await rewardToken.balanceOf(otherUser.address);
+
+      let tx = await releaseEscrowOld.connect(otherUser).withdraw();
+      await tx.wait();
+
+      const expectedTokensReceived = (4 * CYCLE_DURATION) + (CYCLE_DURATION / 13) + 20;
+
+      const newTokenBalance = await rewardToken.balanceOf(otherUser.address);
+      console.log(Number(newTokenBalance));
+      expect(Number(newTokenBalance)).to.equal(Number(initialTokenBalance) + expectedTokensReceived);
+
+      const distributedRewards = await releaseEscrowOld.distributedRewards();
+      expect(distributedRewards).to.equal(expectedTokensReceived);
+
+      const remainingRewards = await releaseEscrowOld.remainingRewards();
+      expect(remainingRewards).to.equal((CYCLE_DURATION * 8) - expectedTokensReceived);
+
+      const releasedRewards = await releaseEscrowOld.releasedRewards();
+      expect(releasedRewards).to.equal(expectedTokensReceived);
+
+      const unclaimedRewards = await releaseEscrowOld.unclaimedRewards();
+      expect(unclaimedRewards).to.equal(0);
+    });
+
+    it("1 week after second cycle starts; stake in second cycle", async () => {
+      const initialTokenBalance = await rewardToken.balanceOf(otherUser.address);
+
+      let tx = await releaseEscrowOld.setLastWithdrawalTime(startTimeOld + CYCLE_DURATION + 10);
+      await tx.wait();
+
+      let tx2 = await releaseEscrowOld.connect(otherUser).withdraw();
+      await tx2.wait();
+
+      const expectedTokensReceived = (2 * (WEEKS_27 - CYCLE_DURATION - 10)) + 34;
+
+      const newTokenBalance = await rewardToken.balanceOf(otherUser.address);
+      console.log(Number(newTokenBalance));
+      expect(Number(newTokenBalance)).to.equal(Number(initialTokenBalance) + expectedTokensReceived);
+
+      const distributedRewards = await releaseEscrowOld.distributedRewards();
+      expect(distributedRewards).to.equal(expectedTokensReceived);
+
+      const remainingRewards = await releaseEscrowOld.remainingRewards();
+      expect(remainingRewards).to.equal((CYCLE_DURATION * 8) - expectedTokensReceived);
+
+      const releasedRewards = await releaseEscrowOld.releasedRewards();
+      expect(releasedRewards).to.equal(expectedTokensReceived);
+
+      const unclaimedRewards = await releaseEscrowOld.unclaimedRewards();
+      expect(unclaimedRewards).to.equal(0);
+    });
+  });
 });

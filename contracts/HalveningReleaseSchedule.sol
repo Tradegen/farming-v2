@@ -37,7 +37,7 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
      * @return (uint256) total number of tokens released during the given cycle.
      */
     function getTokensForCycle(uint256 _cycleIndex) public view override returns (uint256) {
-        return ((block.timestamp >= distributionStartTime) && (_cycleIndex > 0)) ? firstCycleDistribution.div(2 ** _cycleIndex.sub(1)) : 0;
+        return (_cycleIndex > 0) ? firstCycleDistribution.div(2 ** _cycleIndex.sub(1)) : 0;
     }
 
     /**
@@ -54,7 +54,7 @@ contract HalveningReleaseSchedule is IReleaseSchedule {
      * @return (uint256) starting timestamp of the cycle.
      */
     function getStartOfCycle(uint256 _cycleIndex) public view override returns (uint256) {
-        return ((block.timestamp >= distributionStartTime) && (_cycleIndex > 0)) ? distributionStartTime.add((_cycleIndex.sub(1)).mul(cycleDuration)) : 0;
+        return (_cycleIndex > 0) ? distributionStartTime.add((_cycleIndex.sub(1)).mul(cycleDuration)) : 0;
     }
 
     /**
