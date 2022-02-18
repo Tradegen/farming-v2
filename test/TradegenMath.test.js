@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-
+/*
 describe("TradegenMath", () => {
   let deployer;
   let otherUser;
@@ -10,7 +10,7 @@ describe("TradegenMath", () => {
 
   const ONE_DAY = 86400;
   const CYCLE_DURATION = ONE_DAY * 14; // 14 days
-
+  
   before(async () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
@@ -133,4 +133,4 @@ describe("TradegenMath", () => {
         expect(result5).to.equal(200);
     });
   });
-});
+});*/
