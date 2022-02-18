@@ -33,9 +33,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     mapping(address => uint256) public rewards;
 
     uint256 public override totalSupply;
-    uint256 private _weightedTotalSupply;
-    mapping(address => uint256[4]) private _balances;
-    mapping(address => uint256) private _weightedBalance;
+    uint256 public weightedTotalSupply;
+    mapping(address => uint256[4]) public balances;
+    mapping(address => uint256) public weightedBalance;
 
     //Weights per token class
     uint256[4] public WEIGHTS = [65, 20, 10, 5];
@@ -60,7 +60,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     function balanceOf(address account, uint256 tokenClass) external view override returns (uint256) {
         require(tokenClass > 0 && tokenClass < 5, "Token class must be between 1 and 4");
 
-        return _balances[account][tokenClass - 1];
+        return balances[account][tokenClass - 1];
     }
 
     /**
@@ -69,7 +69,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
      * @return (uint256) amount of available unclaimed rewards.
      */
     function earned(address account) public view override returns (uint256) {
-        return _weightedBalance[account].mul(rewardPerTokenStored.sub(userRewardPerTokenPaid[account])).add(rewards[account]);
+        return weightedBalance[account].mul(rewardPerTokenStored.sub(userRewardPerTokenPaid[account])).add(rewards[account]);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -86,9 +86,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
 
         uint256 weightedAmount = amount.mul(WEIGHTS[tokenClass - 1]);
         totalSupply = totalSupply.add(amount);
-        _weightedTotalSupply = _weightedTotalSupply.add(weightedAmount);
-        _weightedBalance[msg.sender] = _weightedBalance[msg.sender].add(weightedAmount);
-        _balances[msg.sender][tokenClass - 1] = _balances[msg.sender][tokenClass - 1].add(amount);
+        weightedTotalSupply = weightedTotalSupply.add(weightedAmount);
+        weightedBalance[msg.sender] = weightedBalance[msg.sender].add(weightedAmount);
+        balances[msg.sender][tokenClass - 1] = balances[msg.sender][tokenClass - 1].add(amount);
 
         stakingToken.safeTransferFrom(msg.sender, address(this), tokenClass, amount, "0x0");
 
@@ -106,9 +106,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
 
         uint256 weightedAmount = amount.mul(WEIGHTS[tokenClass - 1]);
         totalSupply = totalSupply.sub(amount);
-        _weightedTotalSupply = _weightedTotalSupply.sub(weightedAmount);
-        _weightedBalance[msg.sender] = _weightedBalance[msg.sender].sub(weightedAmount);
-        _balances[msg.sender][tokenClass - 1] = _balances[msg.sender][tokenClass - 1].sub(amount);
+        weightedTotalSupply = weightedTotalSupply.sub(weightedAmount);
+        weightedBalance[msg.sender] = weightedBalance[msg.sender].sub(weightedAmount);
+        balances[msg.sender][tokenClass - 1] = balances[msg.sender][tokenClass - 1].sub(amount);
 
         stakingToken.setApprovalForAll(msg.sender, true);
         stakingToken.safeTransferFrom(address(this), msg.sender, tokenClass, amount, "0x0");
@@ -131,9 +131,9 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     function exit() external override {
         for (uint i = 0; i < 4; i++)
         {
-            if (_balances[msg.sender][i] > 0)
+            if (balances[msg.sender][i] > 0)
             {
-                withdraw(_balances[msg.sender][i], i.add(1));
+                withdraw(balances[msg.sender][i], i.add(1));
             }
         }
         
@@ -165,8 +165,8 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     function addReward(uint256 reward) external override onlyPoolManager {
         uint newTotalAvailableRewards = totalAvailableRewards.add(reward);
 
-        if (_weightedTotalSupply > 0) {
-            rewardPerTokenStored = rewardPerTokenStored.add((newTotalAvailableRewards.sub(totalAvailableRewards)).div(_weightedTotalSupply));
+        if (weightedTotalSupply > 0) {
+            rewardPerTokenStored = rewardPerTokenStored.add((newTotalAvailableRewards.sub(totalAvailableRewards)).div(weightedTotalSupply));
         }
 
         totalAvailableRewards = newTotalAvailableRewards;
