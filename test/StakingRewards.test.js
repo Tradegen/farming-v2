@@ -717,7 +717,7 @@ describe("StakingRewards", () => {
 
         const balanceOfOtherClass4 = await stakingRewards.connect(otherUser).balanceOf(otherUser.address, 4);
         expect(balanceOfOtherClass4).to.equal(1);
-    });*/
+    });
 
     it("withdraw() full amount of multiple token classes with multiple investors when distribution has not started", async () => {
         let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
@@ -861,6 +861,6 @@ describe("StakingRewards", () => {
 
         const balanceOfOtherClass4 = await stakingRewards.connect(otherUser).balanceOf(otherUser.address, 4);
         expect(balanceOfOtherClass4).to.equal(0);
-    });
+    });*/
   });
 });

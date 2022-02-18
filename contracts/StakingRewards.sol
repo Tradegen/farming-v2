@@ -163,13 +163,11 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
      * @param reward number of tokens to add to the pool.
      */
     function addReward(uint256 reward) external override onlyPoolManager {
-        uint newTotalAvailableRewards = totalAvailableRewards.add(reward);
-
         if (weightedTotalSupply > 0) {
-            rewardPerTokenStored = rewardPerTokenStored.add((newTotalAvailableRewards.sub(totalAvailableRewards)).div(weightedTotalSupply));
+            rewardPerTokenStored = rewardPerTokenStored.add(reward.div(weightedTotalSupply));
         }
 
-        totalAvailableRewards = newTotalAvailableRewards;
+        totalAvailableRewards = totalAvailableRewards.add(reward);
 
         emit RewardAdded(reward);
     }
