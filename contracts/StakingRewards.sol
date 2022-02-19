@@ -104,16 +104,8 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
         require(amount > 0, "StakingRewards: Amount must be positive.");
         require(tokenClass > 0 && tokenClass < 5, "StakingRewards: Token class must be between 1 and 4");
 
-        uint256 weightedAmount = amount.mul(WEIGHTS[tokenClass - 1]);
-        totalSupply = totalSupply.sub(amount);
-        weightedTotalSupply = weightedTotalSupply.sub(weightedAmount);
-        weightedBalance[msg.sender] = weightedBalance[msg.sender].sub(weightedAmount);
-        balances[msg.sender][tokenClass - 1] = balances[msg.sender][tokenClass - 1].sub(amount);
-
         stakingToken.setApprovalForAll(msg.sender, true);
-        stakingToken.safeTransferFrom(address(this), msg.sender, tokenClass, amount, "0x0");
-
-        emit Withdrawn(msg.sender, tokenClass, amount);
+        _withdraw(msg.sender, amount, tokenClass);
     }
 
     /**
@@ -129,15 +121,16 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
      * @dev Withdraws all tokens a user has staked for each token class.
      */
     function exit() external override {
+        stakingToken.setApprovalForAll(msg.sender, true);
+        getReward();
+
         for (uint i = 0; i < 4; i++)
         {
             if (balances[msg.sender][i] > 0)
             {
-                withdraw(balances[msg.sender][i], i.add(1));
+                _withdraw(msg.sender, balances[msg.sender][i], i.add(1));
             }
         }
-        
-        getReward();
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
@@ -153,6 +146,18 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
             rewardsToken.transfer(msg.sender, reward);
             emit RewardPaid(msg.sender, reward);
         }
+    }
+
+    function _withdraw(address _user, uint _amount, uint _tokenClass) internal {
+        uint256 weightedAmount = _amount.mul(WEIGHTS[_tokenClass - 1]);
+        totalSupply = totalSupply.sub(_amount);
+        weightedTotalSupply = weightedTotalSupply.sub(weightedAmount);
+        weightedBalance[_user] = weightedBalance[_user].sub(weightedAmount);
+        balances[_user][_tokenClass - 1] = balances[_user][_tokenClass - 1].sub(_amount);
+
+        stakingToken.safeTransferFrom(address(this), _user, _tokenClass, _amount, "0x0");
+
+        emit Withdrawn(_user, _tokenClass, _amount);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
