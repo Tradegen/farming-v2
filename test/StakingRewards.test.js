@@ -1855,8 +1855,8 @@ describe("StakingRewards", () => {
         expect(earnedOther).to.equal(0);
     });*/
   });
-
-  describe("#exit", () => {/*
+  /*
+  describe("#exit", () => {
     it("exit() with one user; no rewards available", async () => {
         let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
         await tx.wait();
@@ -2032,7 +2032,7 @@ describe("StakingRewards", () => {
 
         const balanceOfOtherClass4 = await stakingRewards.connect(otherUser).balanceOf(otherUser.address, 4);
         expect(balanceOfOtherClass4).to.equal(0);
-    });*/
+    });
 
     it("exit() with multiple users; rewards available", async () => {
         const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
@@ -2139,6 +2139,1144 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+    });
+  });*/
+
+  describe("#withdraw with rewards", () => {/*
+    it("withdraw() partial amount with one investor; no rewards available", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingRewards.addReward(100000);
+        await tx.wait();
+
+        let tx2 = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(1, 1);
+        await tx4.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
+
+        const totalSupply = await stakingRewards.totalSupply();
+        expect(totalSupply).to.equal(1);
+
+        const weightedTotalSupply = await stakingRewards.weightedTotalSupply();
+        expect(weightedTotalSupply).to.equal(65);
+
+        const weightedBalance = await stakingRewards.weightedBalance(deployer.address);
+        expect(weightedBalance).to.equal(65);
+
+        const balanceOfClass1 = await stakingRewards.balanceOf(deployer.address, 1);
+        expect(balanceOfClass1).to.equal(1);
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(100000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(0);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    it("withdraw() full amount with one investor; no rewards available", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingRewards.addReward(100000);
+        await tx.wait();
+
+        let tx2 = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(2, 1);
+        await tx4.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
+
+        const totalSupply = await stakingRewards.totalSupply();
+        expect(totalSupply).to.equal(0);
+
+        const weightedTotalSupply = await stakingRewards.weightedTotalSupply();
+        expect(weightedTotalSupply).to.equal(0);
+
+        const weightedBalance = await stakingRewards.weightedBalance(deployer.address);
+        expect(weightedBalance).to.equal(0);
+
+        const balanceOfClass1 = await stakingRewards.balanceOf(deployer.address, 1);
+        expect(balanceOfClass1).to.equal(0);
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(100000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(0);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    it("withdraw() partial amount with one investor; unclaimed rewards", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.addReward(130000);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(1, 1);
+        await tx4.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(1000);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(130000);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(130000);
+    });
+
+    it("withdraw() full amount with one investor; unclaimed rewards", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.addReward(130000);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(2, 1);
+        await tx4.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(1000);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(130000);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(130000);
+    });
+
+    it("withdraw() partial amount with one investor; claimed rewards", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.addReward(130000);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(1, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.getRewardTest();
+        await tx5.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore) + BigInt(130000));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(1000);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    it("withdraw() full amount with one investor; claimed rewards", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.addReward(130000);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.getRewardTest();
+        await tx5.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore) + BigInt(130000));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(1000);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    it("withdraw() partial amount with one investor and add reward after", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(1, 3);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(1, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.addReward(75000);
+        await tx5.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(75000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(0);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(75000);
+    });
+
+    it("withdraw() full amount with one investor and add reward after", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 2);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.stake(2, 3);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.stake(2, 4);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.exitTest();
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.addReward(100000);
+        await tx7.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(100000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(0);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    it("withdraw() partial amount with multiple investors; no rewards available", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingRewards.addReward(100000);
+        await tx.wait();
+
+        let tx2 = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.stake(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.connect(otherUser).stake(2, 2);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.withdraw(1, 1);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.connect(otherUser).withdraw(1, 2);
+        await tx7.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther));
+
+        const totalSupply = await stakingRewards.totalSupply();
+        expect(totalSupply).to.equal(2);
+
+        const weightedTotalSupply = await stakingRewards.weightedTotalSupply();
+        expect(weightedTotalSupply).to.equal(85);
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(100000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(0);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(0);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(0);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(0);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(0);
+    });
+
+    it("withdraw() full amount with multiple investors; no rewards available", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingRewards.addReward(100000);
+        await tx.wait();
+
+        let tx2 = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.stake(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.stake(2, 2);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.stake(2, 3);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.exitTest();
+        await tx7.wait();
+
+        let tx8 = await stakingRewards.connect(otherUser).stake(2, 2);
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.connect(otherUser).stake(2, 3);
+        await tx9.wait();
+
+        let tx10 = await stakingRewards.connect(otherUser).stake(2, 4);
+        await tx10.wait();
+
+        let tx11 = await stakingRewards.connect(otherUser).exitTest();
+        await tx11.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther));
+
+        const totalSupply = await stakingRewards.totalSupply();
+        expect(totalSupply).to.equal(0);
+
+        const weightedTotalSupply = await stakingRewards.weightedTotalSupply();
+        expect(weightedTotalSupply).to.equal(0);
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(100000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(0);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(0);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(0);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(0);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(0);
+    });
+
+    it("withdraw() full amount with multiple investors; rewards available", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.stake(2, 2);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.stake(2, 3);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.connect(otherUser).stake(2, 2);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.connect(otherUser).stake(2, 3);
+        await tx7.wait();
+
+        let tx8 = await stakingRewards.connect(otherUser).stake(2, 4);
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.addReward(260000);
+        await tx9.wait();
+
+        let tx10 = await stakingRewards.exitTest();
+        await tx10.wait(); 
+
+        let tx11 = await stakingRewards.connect(otherUser).exitTest();
+        await tx11.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer) + BigInt(190000));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther) + BigInt(70000));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(260000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(1000);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(1000);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(0);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(0);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(0);
+    });
+
+    it("withdraw() full amount with multiple investors and add reward after", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.stake(2, 2);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.stake(2, 3);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.connect(otherUser).stake(2, 2);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.connect(otherUser).stake(2, 3);
+        await tx7.wait();
+
+        let tx8 = await stakingRewards.connect(otherUser).stake(2, 4);
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.exitTest();
+        await tx9.wait(); 
+
+        let tx10 = await stakingRewards.connect(otherUser).exitTest();
+        await tx10.wait();
+
+        let tx11 = await stakingRewards.addReward(260000);
+        await tx11.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(260000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(0);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(0);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(0);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(0);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(0);
+    });
+
+    it("withdraw() full amount with one investor and stake again; no rewards available", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingRewards.addReward(130000);
+        await tx.wait();
+
+        let tx2 = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.exitTest();
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.stake(2, 1);
+        await tx5.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
+
+        const totalSupply = await stakingRewards.totalSupply();
+        expect(totalSupply).to.equal(2);
+
+        const weightedTotalSupply = await stakingRewards.weightedTotalSupply();
+        expect(weightedTotalSupply).to.equal(130);
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(0);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(0);
+
+        const weightedBalance = await stakingRewards.weightedBalance(deployer.address);
+        expect(weightedBalance).to.equal(130);
+
+        const balanceOfClass1 = await stakingRewards.balanceOf(deployer.address, 1);
+        expect(balanceOfClass1).to.equal(2);
+    });
+
+    it("withdraw() full amount with one investor and stake again; unclaimed rewards before withdrawing", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.addReward(130000);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.stake(2, 1);
+        await tx5.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(1000);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(130000);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(130000);
+    });
+
+    it("withdraw() full amount with one investor and stake again; claimed rewards before withdrawing", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.addReward(130000);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.exitTest();
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.stake(2, 1);
+        await tx5.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore) + BigInt(130000));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(1000);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    it("withdraw() full amount with one investor and stake again; claim rewards after staking again", async () => {
+        const balanceBefore = await rewardToken.balanceOf(deployer.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingRewards.stake(2, 1);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.addReward(130000);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.withdraw(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.stake(2, 1);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.getRewardTest();
+        await tx6.wait();
+
+        const balanceAfter = await rewardToken.balanceOf(deployer.address);
+
+        expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore) + BigInt(130000));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaid = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaid).to.equal(1000);
+
+        const rewards = await stakingRewards.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        const earned = await stakingRewards.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    it("withdraw() full amount with multiple investors and stake again; no rewards available", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingRewards.addReward(130000);
+        await tx.wait();
+
+        let tx2 = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.stake(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.connect(otherUser).stake(2, 1);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.exitTest();
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(2, 1);
+        await tx7.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther));
+
+        const totalSupply = await stakingRewards.totalSupply();
+        expect(totalSupply).to.equal(4);
+
+        const weightedTotalSupply = await stakingRewards.weightedTotalSupply();
+        expect(weightedTotalSupply).to.equal(260);
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(130000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(0);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(0);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(0);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(0);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(0);
+
+        const weightedBalanceDeployer = await stakingRewards.weightedBalance(deployer.address);
+        expect(weightedBalanceDeployer).to.equal(130);
+
+        const weightedBalanceOther = await stakingRewards.connect(otherUser).weightedBalance(otherUser.address);
+        expect(weightedBalanceOther).to.equal(130);
+
+        const balanceOfDeployerClass1 = await stakingRewards.balanceOf(deployer.address, 1);
+        expect(balanceOfDeployerClass1).to.equal(2);
+
+        const balanceOfOtherClass1 = await stakingRewards.connect(otherUser).balanceOf(otherUser.address, 1);
+        expect(balanceOfOtherClass1).to.equal(2);
+    });
+
+    it("withdraw() full amount with multiple investors and stake again; unclaimed rewards before withdrawing", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.connect(otherUser).stake(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.addReward(260000);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.withdraw(2, 1);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(2, 1);
+        await tx7.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(260000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(1000);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(0);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(130000);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(130000);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(130000);
+    });
+
+    it("withdraw() full amount with multiple investors and stake again; claimed rewards before withdrawing", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.connect(otherUser).stake(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.addReward(260000);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.exitTest();
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(2, 1);
+        await tx7.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer) + BigInt(130000));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(260000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(1000);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(0);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(0);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(0);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(130000);
+    });
+
+    it("withdraw() full amount with multiple investors and stake again; claim rewards after staking again", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.connect(otherUser).stake(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.addReward(260000);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.withdraw(2, 1);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(2, 1);
+        await tx7.wait();
+
+        let tx8 = await stakingRewards.getRewardTest();
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.connect(otherUser).getRewardTest();
+        await tx9.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer) + BigInt(130000));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther) + BigInt(130000));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(260000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(1000);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(1000);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(1000);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(0);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(0);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(0);
+    });
+
+    it("withdraw() full amount with multiple investors, stake again, claim rewards, and add rewards again", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.connect(otherUser).stake(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.addReward(260000);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.withdraw(2, 1);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(2, 1);
+        await tx7.wait();
+
+        let tx8 = await stakingRewards.getRewardTest();
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.connect(otherUser).getRewardTest();
+        await tx9.wait();
+
+        let tx10 = await stakingRewards.addReward(260000);
+        await tx10.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer) + BigInt(130000));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther) + BigInt(130000));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(520000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(2000);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(1000);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(1000);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(0);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(130000);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(130000);
+    });*/
+
+    it("withdraw() full amount with multiple investors, stake again, leave rewards unclaimed, and add rewards again", async () => {
+        const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
+        await tx.wait();
+
+        let tx2 = await stakingToken.connect(otherUser).setApprovalForAll(stakingRewardsAddress, true);
+        await tx2.wait();
+
+        let tx3 = await stakingRewards.stake(2, 1);
+        await tx3.wait();
+
+        let tx4 = await stakingRewards.connect(otherUser).stake(2, 1);
+        await tx4.wait();
+
+        let tx5 = await stakingRewards.addReward(260000);
+        await tx5.wait();
+
+        let tx6 = await stakingRewards.withdraw(2, 1);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(2, 1);
+        await tx7.wait();
+
+        let tx8 = await stakingRewards.connect(otherUser).getRewardTest();
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.addReward(260000);
+        await tx9.wait();
+
+        const balanceAfterDeployer = await rewardToken.balanceOf(deployer.address);
+        const balanceAfterOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
+
+        expect(BigInt(balanceAfterDeployer)).to.equal(BigInt(balanceBeforeDeployer));
+        expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther) + BigInt(130000));
+
+        const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(520000);
+
+        const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(2000);
+
+        const userRewardPerTokenPaidDeployer = await stakingRewards.userRewardPerTokenPaid(deployer.address);
+        expect(userRewardPerTokenPaidDeployer).to.equal(1000);
+
+        const userRewardPerTokenPaidOther = await stakingRewards.connect(otherUser).userRewardPerTokenPaid(otherUser.address);
+        expect(userRewardPerTokenPaidOther).to.equal(1000);
+
+        const rewardsDeployer = await stakingRewards.rewards(deployer.address);
+        expect(rewardsDeployer).to.equal(130000);
+
+        const rewardsOther = await stakingRewards.connect(otherUser).rewards(otherUser.address);
+        expect(rewardsOther).to.equal(0);
+
+        const earnedDeployer = await stakingRewards.earned(deployer.address);
+        expect(earnedDeployer).to.equal(260000);
+
+        const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
+        expect(earnedOther).to.equal(130000);
     });
   });
 });
