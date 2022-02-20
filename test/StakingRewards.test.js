@@ -3215,7 +3215,7 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(130000);
-    });*/
+    });
 
     it("withdraw() full amount with multiple investors, stake again, leave rewards unclaimed, and add rewards again", async () => {
         const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
@@ -3277,6 +3277,6 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(130000);
-    });
+    });*/
   });
 });
