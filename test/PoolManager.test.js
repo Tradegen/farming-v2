@@ -261,9 +261,9 @@ describe("PoolManager", () => {
         let index = await poolManager.getStartOfPeriod(1);
         expect(index).to.equal(current + ONE_WEEK + ONE_WEEK);
     });
-  });*/
+  });
 
-  describe("#rewardPerToken", () => {/*
+  describe("#rewardPerToken", () => {
     it("0 total weight in current period and period index is 0", async () => {
         let rewardPerToken = await poolManager.rewardPerToken();
         expect(rewardPerToken).to.equal(0);
@@ -388,7 +388,7 @@ describe("PoolManager", () => {
         let rewardPerToken = await poolManager.rewardPerToken();
         let flooredResult = BigInt(rewardPerToken) / BigInt(1e16);
         expect(Number(flooredResult)).to.equal(48076); // [(3 * 125e24 * 1e18) / (26 * 30e21)] / 1e16
-    });*/
+    });
 
     it("cross-cycle; same weight across 2 periods", async () => {
         let current = await poolManager.getCurrentTime();
@@ -421,6 +421,356 @@ describe("PoolManager", () => {
         let rewardPerToken = await poolManager.rewardPerToken();
         let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
         expect(Number(flooredResult)).to.equal(3); // [(3628814 * 1e18) / 1209600] / 1e18
+    });
+  });*/
+
+  describe("#earned", () => {/*
+    it("0 pool weight in current period and global weight is 0", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx.wait();
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    it("0 pool weight in current period and global weight is non-zero; one pool, period 0", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
+        await tx2.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(parseEther("4"));
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(0);
+    });
+
+    // Accounts for 5 seconds delay between local time and block.timestamp
+    it("non-zero pool weight in current period and global weight is non-zero; one pool, period 0", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
+        await tx2.wait();
+
+        // Same as global weight
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, ONE_WEEK + ONE_WEEK);
+        await tx3.wait();
+
+        let tx4 = await poolManager.setStartTime(current - 100);
+        await tx4.wait();
+
+        let tx5 = await poolManager.setLastUpdateTime(current - 100);
+        await tx5.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(parseEther("4"));
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(420);
+    });*/
+    /*
+    // Accounts for 9 seconds delay between local time and block.timestamp
+    it("0 pool weight in current period and global weight is non-zero; multiple pools, period 0", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - 100);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setStartTime(current - 100);
+        await tx.wait();
+
+        let tx2 = await poolManager.setLastUpdateTime(current - 100);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx3.wait();
+
+        let tx4 = await poolManager.setPoolInfo(otherUser.address, true, false, otherUser.address, 0, 0, 0, 0, 0);
+        await tx4.wait();
+
+        // Same as global weight
+        let tx5 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, 0, 0, ONE_WEEK + ONE_WEEK);
+        await tx5.wait();
+
+        let tx6 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
+        await tx6.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(parseEther("4"));
+
+        let earnedDeployer = await poolManager.earned(deployer.address);
+        expect(earnedDeployer).to.equal(0);
+
+        let earnedOther = await poolManager.earned(otherUser.address);
+        expect(earnedOther).to.equal(436);
+    });
+
+    // Accounts for 10 seconds delay between local time and block.timestamp
+    it("non-zero pool weight in current period and global weight is non-zero; multiple pools, period 0", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - 100);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setStartTime(current - 100);
+        await tx.wait();
+
+        let tx2 = await poolManager.setLastUpdateTime(current - 100);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx3.wait();
+
+        let tx4 = await poolManager.setPoolInfo(otherUser.address, true, false, otherUser.address, 0, 0, 0, 0, 0);
+        await tx4.wait();
+
+        // Global weight / 2
+        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, ONE_WEEK);
+        await tx5.wait();
+
+        // Global weight / 2
+        let tx6 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, 0, 0, ONE_WEEK);
+        await tx6.wait();
+
+        let tx7 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
+        await tx7.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(parseEther("4"));
+
+        let earnedDeployer = await poolManager.earned(deployer.address);
+        expect(earnedDeployer).to.equal(220);
+
+        let earnedOther = await poolManager.earned(otherUser.address);
+        expect(earnedOther).to.equal(220);
+    });
+
+    // Accounts for 10 seconds delay between local time and block.timestamp
+    it("non-zero pool weight in period 1, 0 pool weight in previous period, and global weight is non-zero in period 1; one pool", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - ONE_WEEK - ONE_WEEK - 100);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - ONE_WEEK - ONE_WEEK - 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, 0);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(1, ONE_WEEK + ONE_WEEK);
+        await tx3.wait();
+
+        // 0 weight in period 0
+        let tx4 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, 0);
+        await tx4.wait();
+
+        // Same as global weight in period 1
+        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 1, 0, 0, ONE_WEEK + ONE_WEEK);
+        await tx5.wait();
+
+        let tx6 = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx6.wait();
+
+        let tx7 = await poolManager.setLastUpdateTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx7.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
+        expect(Number(flooredResult)).to.equal(43989); // floor(4838839 * 1e18 / 110)
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(4838839);
+    });
+
+    // Accounts for 10 seconds delay between local time and block.timestamp
+    it("non-zero pool weight in period 1, 0 pool weight in previous period, and global weight is non-zero in both periods; one pool", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - ONE_WEEK - ONE_WEEK - 100);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - ONE_WEEK - ONE_WEEK - 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(1, ONE_WEEK + ONE_WEEK);
+        await tx3.wait();
+
+        // 0 weight in period 0
+        let tx4 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, 0);
+        await tx4.wait();
+
+        // Same as global weight in period 1
+        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 1, 0, 0, ONE_WEEK + ONE_WEEK);
+        await tx5.wait();
+
+        let tx6 = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx6.wait();
+
+        let tx7 = await poolManager.setLastUpdateTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx7.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        console.log(rewardPerToken.toString());
+        let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
+        expect(Number(flooredResult)).to.equal(4); // floor(4838839 * 1e18 / 1209700)
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(440);
+    });
+
+    // Accounts for 10 seconds delay between local time and block.timestamp
+    it("non-zero pool weight in period 1, non-zero pool weight in previous period, and global weight is non-zero in both periods; one pool", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - ONE_WEEK - ONE_WEEK - 100);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - ONE_WEEK - ONE_WEEK - 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(1, ONE_WEEK + ONE_WEEK);
+        await tx3.wait();
+
+        // Same as global weight in period 0
+        let tx4 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, ONE_WEEK + ONE_WEEK);
+        await tx4.wait();
+
+        // Same as global weight in period 1
+        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 1, 0, 0, ONE_WEEK + ONE_WEEK);
+        await tx5.wait();
+
+        let tx6 = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx6.wait();
+
+        let tx7 = await poolManager.setLastUpdateTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx7.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        console.log(rewardPerToken.toString());
+        let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
+        expect(Number(flooredResult)).to.equal(4); // floor(4838839 * 1e18 / 1209700)
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(4838839);
+    });*/
+
+    // Accounts for 12 seconds delay between local time and block.timestamp
+    it("non-zero pool weight in period 1, non-zero pool weight in previous period, and global weight is non-zero in both periods; multiple pools", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - ONE_WEEK - ONE_WEEK - 100);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - ONE_WEEK - ONE_WEEK - 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setPoolInfo(otherUser.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK );
+        await tx3.wait();
+
+        let tx4 = await poolManager.setGlobalPeriodInfo(1, ONE_WEEK + ONE_WEEK);
+        await tx4.wait();
+
+        // (Global weight / 2) in period 0
+        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, ONE_WEEK * 1.5);
+        await tx5.wait();
+
+        // (Global weight / 2) in period 1
+        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 1, 0, 0, ONE_WEEK * 1.5);
+        await tx6.wait();
+
+        // (Global weight / 2) in period 0
+        let tx7 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, 0, 0, ONE_WEEK * 0.5);
+        await tx7.wait();
+
+        // (Global weight / 2) in period 1
+        let tx8 = await poolManager.setPoolPeriodInfo(otherUser.address, 1, 0, 0, ONE_WEEK * 0.5);
+        await tx8.wait();
+
+        let tx9 = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx9.wait();
+
+        let tx10 = await poolManager.setLastUpdateTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx10.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        console.log(rewardPerToken.toString());
+        let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
+        expect(Number(flooredResult)).to.equal(4); // floor(4838850 * 1e18 / 1209700)
+
+        let earnedDeployer = await poolManager.earned(deployer.address);
+        expect(earnedDeployer).to.equal(3629138);
+
+        let earnedOther = await poolManager.earned(otherUser.address);
+        expect(earnedOther).to.equal(1209712);
     });
   });
 });
