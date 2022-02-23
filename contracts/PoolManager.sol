@@ -100,16 +100,21 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     /**
      * @dev Calculates the amount of rewards per "token" a pool has.
+     * @notice Scaled by a factor of 1e18.
      * @notice For the PoolManager contract, one "token" represents one unit of "weight" (derived from a pool's unrealized profits and token price).
      * @return (uint256) reward per "token".
      */
     function rewardPerToken() public view override returns (uint256) {
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
         uint256 startOfCycle = releaseSchedule.getStartOfCurrentCycle();
+        uint256 scaledWeight = TradegenMath.scaleByTime(globalPeriods[currentPeriodIndex].totalWeight,
+                                    currentPeriodIndex > 0 ? globalPeriods[currentPeriodIndex.sub(1)].totalWeight : 0,
+                                    block.timestamp,
+                                    getStartOfPeriod(currentPeriodIndex),
+                                    PERIOD_DURATION);
 
-        if (globalPeriods[currentPeriodIndex].totalWeight == 0 &&
-            currentPeriodIndex > 0 &&
-            globalPeriods[currentPeriodIndex.sub(1)].totalWeight == 0) {
+        // Prevent division by 0 from TradegenMath.scaleByTime() returning 0
+        if (scaledWeight == 0) {
             return rewardPerTokenStored;
         }
 
@@ -123,12 +128,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
             availableTokens = (block.timestamp.sub(lastUpdateTime)).mul(releaseSchedule.getCurrentRewardRate());
         }
 
-        return rewardPerTokenStored.add(availableTokens.mul(1e18).div(
-            TradegenMath.scaleByTime(globalPeriods[currentPeriodIndex].totalWeight,
-                                    currentPeriodIndex > 0 ? globalPeriods[currentPeriodIndex.sub(1)].totalWeight : 0,
-                                    block.timestamp,
-                                    getStartOfPeriod(currentPeriodIndex),
-                                    PERIOD_DURATION)));
+        return rewardPerTokenStored.add(availableTokens.mul(1e18).div(scaledWeight));
     }
 
     /**

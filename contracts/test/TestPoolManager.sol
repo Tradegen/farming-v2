@@ -13,6 +13,18 @@ contract TestPoolManager is PoolManager {
         return _calculatePoolWeight(_poolAddress);
     }
 
+    function setStartTime(uint _startTime) external {
+        startTime = _startTime;
+    }
+
+    function setLastUpdateTime(uint _lastUpdateTime) external {
+        lastUpdateTime = _lastUpdateTime;
+    }
+
+    function getCurrentTime() external view returns(uint256) {
+        return block.timestamp;
+    }
+
     function setPoolInfo(address _poolAddress, bool _isValid, bool _isEligible, address _farmAddress, uint256 _unrealizedProfits, uint256 _latestRecordedPrice, uint256 _latestRecordedPeriodIndex, uint256 _previousRecordedPrice, uint256 _previousRecordedPeriodIndex) external {
         pools[_poolAddress] = PoolInfo({
             isValid: _isValid,

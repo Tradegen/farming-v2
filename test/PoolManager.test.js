@@ -39,8 +39,9 @@ describe("PoolManager", () => {
   let startTimeOld;
   let startTimeFuture;
 
-  const WEEKS_27 = 86400 * 7 * 27;
-  const CYCLE_DURATION = 86400 * 7 * 26; // 26 weeks
+  const ONE_WEEK = 86400 * 7;
+  const WEEKS_27 = ONE_WEEK * 27;
+  const CYCLE_DURATION = ONE_WEEK * 26; // 26 weeks
   
   before(async () => {
     const signers = await ethers.getSigners();
@@ -56,10 +57,6 @@ describe("PoolManager", () => {
     startTimeCurrent = Math.floor(Date.now() / 1000) - 100;
     startTimeOld = Math.floor(Date.now() / 1000) - WEEKS_27;
     startTimeFuture = Math.floor(Date.now() / 1000) + 10000;
-
-    scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, startTimeCurrent);
-    await scheduleCurrent.deployed();
-    scheduleCurrentAddress = scheduleCurrent.address;
 
     scheduleOld = await ScheduleFactory.deploy(CYCLE_DURATION * 4, startTimeOld);
     await scheduleOld.deployed();
@@ -81,10 +78,6 @@ describe("PoolManager", () => {
     await stakingToken2.deployed();
     stakingTokenAddress2 = stakingToken2.address;
 
-    releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, startTimeCurrent);
-    await releaseEscrowCurrent.deployed();
-    releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
-
     releaseEscrowOld = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleOldAddress, startTimeOld);
     await releaseEscrowOld.deployed();
     releaseEscrowOldAddress = releaseEscrowOld.address;
@@ -93,29 +86,37 @@ describe("PoolManager", () => {
     await releaseEscrowFuture.deployed();
     releaseEscrowFutureAddress = releaseEscrowFuture.address;
 
+    // Transfer tokens to ReleaseEscrowOld
+    let tx = await rewardToken.approve(releaseEscrowOldAddress, CYCLE_DURATION * 8);
+    await tx.wait();
+    let tx2 = await rewardToken.transfer(releaseEscrowOldAddress, CYCLE_DURATION * 8);
+    await tx2.wait();
+
+    // Transfer tokens to ReleaseEscrowFuture
+    let tx3 = await rewardToken.approve(releaseEscrowFutureAddress, CYCLE_DURATION * 8);
+    await tx3.wait();
+    let tx4 = await rewardToken.transfer(releaseEscrowFutureAddress, CYCLE_DURATION * 8);
+    await tx4.wait();
+  });
+
+  beforeEach(async () => {
+    scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, startTimeCurrent);
+    await scheduleCurrent.deployed();
+    scheduleCurrentAddress = scheduleCurrent.address;
+
+    releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, startTimeCurrent);
+    await releaseEscrowCurrent.deployed();
+    releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+    poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+    await poolManager.deployed();
+    poolManagerAddress = poolManager.address;
+
     // Transfer tokens to ReleaseEscrowCurrent
     let tx = await rewardToken.approve(releaseEscrowCurrentAddress, CYCLE_DURATION * 8);
     await tx.wait();
     let tx2 = await rewardToken.transfer(releaseEscrowCurrentAddress, CYCLE_DURATION * 8);
     await tx2.wait();
-
-    // Transfer tokens to ReleaseEscrowOld
-    let tx3 = await rewardToken.approve(releaseEscrowOldAddress, CYCLE_DURATION * 8);
-    await tx3.wait();
-    let tx4 = await rewardToken.transfer(releaseEscrowOldAddress, CYCLE_DURATION * 8);
-    await tx4.wait();
-
-    // Transfer tokens to ReleaseEscrowFuture
-    let tx5 = await rewardToken.approve(releaseEscrowFutureAddress, CYCLE_DURATION * 8);
-    await tx5.wait();
-    let tx6 = await rewardToken.transfer(releaseEscrowFutureAddress, CYCLE_DURATION * 8);
-    await tx6.wait();
-  });
-
-  beforeEach(async () => {
-    poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
-    await poolManager.deployed();
-    poolManagerAddress = poolManager.address;
   });
   /*
   describe("#registerPool", () => {
@@ -159,7 +160,7 @@ describe("PoolManager", () => {
         expect(poolInfo2[2]).to.not.equal(poolInfo1[2]);
     });
   });*/
-  
+  /*
   describe("#markPoolAsEligible", () => {
     it("only registered pool", async () => {
         let tx = poolManager.markPoolAsEligible(0, 1000, 10);
@@ -223,6 +224,203 @@ describe("PoolManager", () => {
         expect(poolInfo2[0]).to.be.true;
         expect(poolInfo2[1]).to.be.true;
         expect(poolInfo2[2]).to.equal(otherUser.address);
+    });
+  });
+
+  describe("#getPeriodIndex", () => {
+    it("timestamp must be greater than start time", async () => {
+        await expect(poolManager.getPeriodIndex(startTimeCurrent - ONE_WEEK)).to.be.reverted;
+    });
+
+    it("timestamp in period 0", async () => {
+        let current = Math.floor(Date.now() / 1000);
+        let index = await poolManager.getPeriodIndex(current + 100);
+        expect(index).to.equal(0);
+    });
+
+    it("timestamp in period 1", async () => {
+        let current = Math.floor(Date.now() / 1000);
+        let index = await poolManager.getPeriodIndex(current + 1000 + ONE_WEEK + ONE_WEEK);
+        expect(index).to.equal(1);
+    });
+  });
+
+  describe("#getStartOfPeriod", () => {
+    it("index must be positive", async () => {
+        await expect(poolManager.getStartOfPeriod(0)).to.be.reverted;
+    });
+
+    it("start of period 0", async () => {
+        let current = Math.floor(Date.now() / 1000);
+        let index = await poolManager.getStartOfPeriod(0);
+        expect(index).to.equal(current);
+    });
+
+    it("start of period 1", async () => {
+        let current = Math.floor(Date.now() / 1000);
+        let index = await poolManager.getStartOfPeriod(1);
+        expect(index).to.equal(current + ONE_WEEK + ONE_WEEK);
+    });
+  });*/
+
+  describe("#rewardPerToken", () => {/*
+    it("0 total weight in current period and period index is 0", async () => {
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(0);
+    });
+
+    it("0 total weight in current period and previous period", async () => {
+        let current = Math.floor(Date.now() / 1000);
+
+        let tx = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(0);
+    });
+
+    it("period 0", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        let tx = await poolManager.setStartTime(current - 100);
+        await tx.wait();
+
+        let tx2 = await poolManager.setLastUpdateTime(current - 100);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
+        await tx3.wait();
+        
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(parseEther("4"));
+    });
+
+    // Accounts for difference of 6 seconds between local time and block.timestamp
+    it("period 1", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - ONE_WEEK - ONE_WEEK - 100);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - ONE_WEEK - ONE_WEEK - 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx.wait();
+
+        let tx2 = await poolManager.setLastUpdateTime(current - ONE_WEEK - ONE_WEEK - 100);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(1, ONE_WEEK + ONE_WEEK);
+        await tx3.wait();
+        
+        let rewardPerToken = await poolManager.rewardPerToken();
+        let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
+        expect(Number(flooredResult)).to.equal(45649); // floor(4838824 * 1e18 / 106)
+    });
+
+    // Accounts for difference of 7 seconds between local time and block.timestamp
+    it("weights in two periods; test values", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - (ONE_WEEK * 3));
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - (ONE_WEEK * 3));
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setStartTime(current - (ONE_WEEK * 3));
+        await tx.wait();
+
+        let tx2 = await poolManager.setLastUpdateTime(current - (ONE_WEEK * 3));
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK * 2);
+        await tx3.wait();
+
+        let tx4 = await poolManager.setGlobalPeriodInfo(1, ONE_WEEK * 4);
+        await tx4.wait();
+        
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(parseEther("4"));
+    });
+
+    // Accounts for difference of 7 seconds between local time and block.timestamp
+    it("weights in two periods; production values", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(parseEther("125000000"), current - (ONE_WEEK * 3));
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - (ONE_WEEK * 3));
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setStartTime(current - (ONE_WEEK * 3));
+        await tx.wait();
+
+        let tx2 = await poolManager.setLastUpdateTime(current - (ONE_WEEK * 3));
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(0, parseEther("20000"));
+        await tx3.wait();
+
+        let tx4 = await poolManager.setGlobalPeriodInfo(1, parseEther("40000"));
+        await tx4.wait();
+        
+        let rewardPerToken = await poolManager.rewardPerToken();
+        let flooredResult = BigInt(rewardPerToken) / BigInt(1e16);
+        expect(Number(flooredResult)).to.equal(48076); // [(3 * 125e24 * 1e18) / (26 * 30e21)] / 1e16
+    });*/
+
+    it("cross-cycle; same weight across 2 periods", async () => {
+        let current = await poolManager.getCurrentTime();
+
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current - (27 * ONE_WEEK));
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, current - (27 * ONE_WEEK));
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, releaseEscrowCurrentAddress, scheduleCurrentAddress, deployer.address);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        let tx = await poolManager.setStartTime(current - (27 * ONE_WEEK));
+        await tx.wait();
+
+        // One week in cycle 0, one week in cycle 1
+        let tx2 = await poolManager.setLastUpdateTime(current - (2 * ONE_WEEK));
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(12, ONE_WEEK + ONE_WEEK);
+        await tx3.wait();
+
+        let tx4 = await poolManager.setGlobalPeriodInfo(13, ONE_WEEK + ONE_WEEK);
+        await tx4.wait();
+        
+        let rewardPerToken = await poolManager.rewardPerToken();
+        let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
+        expect(Number(flooredResult)).to.equal(3); // [(3628814 * 1e18) / 1209600] / 1e18
     });
   });
 });

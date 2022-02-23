@@ -46,7 +46,7 @@ interface IReleaseSchedule {
     function getCurrentRewardRate() external view returns (uint256);
 
     /**
-     * @dev Returns the starting timestamp of the currenet cycle.
+     * @dev Returns the starting timestamp of the current cycle.
      * @return (uint256) starting timestamp.
      */
     function getStartOfCurrentCycle() external view returns (uint256);
