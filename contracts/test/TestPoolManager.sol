@@ -6,8 +6,8 @@ pragma solidity ^0.8.3;
 import "../PoolManager.sol";
 
 contract TestPoolManager is PoolManager {
-    constructor(address _rewardsToken, address _releaseEscrow, address _releaseSchedule, address _poolFactory)
-        PoolManager(_rewardsToken, _releaseEscrow, _releaseSchedule, _poolFactory) {}
+    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory)
+        PoolManager(_rewardsToken, _releaseSchedule, _poolFactory) {}
 
     function calculatePoolWeight(address _poolAddress) external view returns(uint256) {
         return _calculatePoolWeight(_poolAddress);
@@ -25,7 +25,16 @@ contract TestPoolManager is PoolManager {
         return block.timestamp;
     }
 
-    function setPoolInfo(address _poolAddress, bool _isValid, bool _isEligible, address _farmAddress, uint256 _unrealizedProfits, uint256 _latestRecordedPrice, uint256 _latestRecordedPeriodIndex, uint256 _previousRecordedPrice, uint256 _previousRecordedPeriodIndex) external {
+    function setGlobalAPCVariables(uint256 _totalWeightedAPC, uint256 _totalDuration) external {
+        totalWeightedAPC = _totalWeightedAPC;
+        totalDuration = _totalDuration;
+    }
+
+    function setPoolAPC(address _poolAddress, uint256 _APC) external {
+        poolAPC[_poolAddress] = _APC;
+    }
+
+    function setPoolInfo(address _poolAddress, bool _isValid, bool _isEligible, address _farmAddress, uint256 _unrealizedProfits, uint256 _latestRecordedPrice, uint256 _latestRecordedPeriodIndex, uint256 _previousRecordedPrice, uint256 _previousRecordedPeriodIndex, uint256 _lastUpdated, uint256 _createdOn) external {
         pools[_poolAddress] = PoolInfo({
             isValid: _isValid,
             isEligible: _isEligible,
@@ -34,7 +43,9 @@ contract TestPoolManager is PoolManager {
             latestRecordedPrice: _latestRecordedPrice,
             latestRecordedPeriodIndex: _latestRecordedPeriodIndex,
             previousRecordedPrice: _previousRecordedPrice,
-            previousRecordedPeriodIndex: _previousRecordedPeriodIndex
+            previousRecordedPeriodIndex: _previousRecordedPeriodIndex,
+            lastUpdated: _lastUpdated,
+            createdOn: _createdOn
         });
     }
 

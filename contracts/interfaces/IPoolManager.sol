@@ -62,12 +62,11 @@ interface IPoolManager {
     /**
      * @dev Marks a pool as eligible for farming rewards, if it meets the minimum criteria.
      * @notice This function is meant to be called by a pool contract, from the pool's owner.
-     * @param createdOn timestamp when the pool was created.
      * @param totalValueLocked current value of the pool in USD.
      * @param numberOfInvestors number of unique investors in the pool.
      * @return (bool) whether the pool was marked as eligible.
      */
-    function markPoolAsEligible(uint32 createdOn, uint256 totalValueLocked, uint256 numberOfInvestors) external returns (bool);
+    function markPoolAsEligible(uint256 totalValueLocked, uint256 numberOfInvestors) external returns (bool);
 
     /**
      * @dev Claims the pool's available rewards.

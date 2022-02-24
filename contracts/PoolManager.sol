@@ -34,6 +34,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
         uint256 latestRecordedPeriodIndex;
         uint256 previousRecordedPrice;
         uint256 previousRecordedPeriodIndex;
+        uint256 lastUpdated;
+        uint256 createdOn;
     }
 
     struct GlobalPeriodInfo {
@@ -63,6 +65,10 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
     mapping(address => PoolInfo) public pools; // Keyed by pool address
     mapping(uint256 => GlobalPeriodInfo) public globalPeriods; // Keyed by period index
     mapping(address => mapping(uint256 => PoolPeriodInfo)) public poolPeriods; // Keyed by pool address and period index
+
+    mapping(address => uint256) public poolAPC; // The average price change of each pool
+    uint256 public totalWeightedAPC; // Sum of (pool APC * pool duration)
+    uint256 public totalDuration; // Sum of pool duration; used for calculating average APC
 
     uint256 public lastUpdateTime;
     uint256 public startTime;
@@ -211,8 +217,18 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
         pools[msg.sender].latestRecordedPeriodIndex = currentPeriodIndex;
 
         if (!pools[msg.sender].isEligible) {
+            pools[msg.sender].lastUpdated = block.timestamp;
             return;
         }
+
+        totalWeightedAPC = totalWeightedAPC.sub(poolAPC[msg.sender].mul(pools[msg.sender].lastUpdated.sub(pools[msg.sender].createdOn)));
+        totalDuration = totalDuration.sub(pools[msg.sender].lastUpdated.sub(pools[msg.sender].createdOn));
+
+        poolAPC[msg.sender] = _calculateAveragePriceChange(msg.sender);
+        pools[msg.sender].lastUpdated = block.timestamp;
+        
+        totalWeightedAPC = totalWeightedAPC.add(poolAPC[msg.sender].mul(block.timestamp.sub(pools[msg.sender].createdOn)));
+        totalDuration = totalDuration.add(block.timestamp.sub(pools[msg.sender].createdOn));
 
         uint256 newPoolWeight = _calculatePoolWeight(msg.sender);
 
@@ -253,7 +269,9 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
             latestRecordedPrice: seedPrice,
             latestRecordedPeriodIndex: currentPeriodIndex,
             previousRecordedPrice: seedPrice,
-            previousRecordedPeriodIndex: currentPeriodIndex
+            previousRecordedPeriodIndex: currentPeriodIndex,
+            lastUpdated: block.timestamp,
+            createdOn: block.timestamp
         });
 
         emit RegisteredPool(poolAddress, farmAddress);
@@ -262,17 +280,15 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
     /**
      * @dev Marks a pool as eligible for farming rewards, if it meets the minimum criteria.
      * @notice This function is meant to be called by a pool contract, from the pool's owner.
-     * @param createdOn timestamp when the pool was created.
      * @param totalValueLocked current value of the pool in USD.
      * @param numberOfInvestors number of unique investors in the pool.
      * @return (bool) whether the pool was marked as eligible.
      */
-    function markPoolAsEligible(uint32 createdOn, uint256 totalValueLocked, uint256 numberOfInvestors) external override poolIsValid(msg.sender) returns (bool) {
-        require(createdOn >= 0, "PoolManager: timestamp must be positive.");
+    function markPoolAsEligible(uint256 totalValueLocked, uint256 numberOfInvestors) external override poolIsValid(msg.sender) returns (bool) {
         require(totalValueLocked >= 0, "PoolManager: total value locked must be positive.");
         require(numberOfInvestors >= 0, "PoolManager: numberOfInvestors must be positive.");
 
-        if (block.timestamp.sub(createdOn) < MINIMUM_POOL_DURATION) {
+        if (block.timestamp.sub(pools[msg.sender].createdOn) < MINIMUM_POOL_DURATION) {
             return false;
         }
 
@@ -324,12 +340,28 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
 
     /**
      * @dev Calculates the pool's weight.
-     * @notice The weight is calculated by [sqrt(1000 * averagePriceChange) * (log2(unrealizedProfits))^2]
-     * @notice Average price change is the difference between latest price and previous price, divided by the number of periods between the two prices.
+     * @notice The weight is calculated by [unrealizedProfits / 1e18 * x].
+     * @notice If pool's APC >= average APC, x = sqrt(pool APC - average APC).
+     * @notice Else, x = log2(pool APC) / sqrt(average APC - pool APC).
+     * @notice Average APC = totalWeightedAPC / totalDuration.
      * @param poolAddress address of the pool.
      * @return (uint256) weight of the pool.
      */
     function _calculatePoolWeight(address poolAddress) internal view returns (uint256) {
+        if (poolAPC[poolAddress] >= totalWeightedAPC.div(totalDuration)) {
+            return pools[poolAddress].unrealizedProfits.div(1e18).mul(TradegenMath.sqrt(poolAPC[poolAddress].sub(totalWeightedAPC.div(totalDuration))));
+        }
+
+        return pools[poolAddress].unrealizedProfits.div(1e18).mul(TradegenMath.log(poolAPC[poolAddress])).div((totalWeightedAPC.div(totalDuration)).sub(poolAPC[poolAddress]));
+    }
+
+    /**
+     * @dev Calculates the pool's average price change over the last 2 periods.
+     * @notice Average price change is the difference between latest price and previous price, divided by the number of periods between the two prices.
+     * @param poolAddress address of the pool.
+     * @return (uint256) average price change.
+     */
+    function _calculateAveragePriceChange(address poolAddress) internal view returns (uint256) {
         PoolInfo memory data = pools[poolAddress];
 
         // Return early if the pool's token has declined in price.
@@ -348,12 +380,10 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
         }
 
         // Average price change is scaled by 1000x to preserve fractional percent changes.
-        uint256 averagePriceChange = (data.latestRecordedPrice.sub(data.previousRecordedPrice)).mul(1e18)
+        return (data.latestRecordedPrice.sub(data.previousRecordedPrice)).mul(1e18)
                                         .div(data.previousRecordedPrice)
                                         .div((data.latestRecordedPeriodIndex == data.previousRecordedPeriodIndex)
-                                                ? 1 : data.latestRecordedPeriodIndex.sub(data.previousRecordedPeriodIndex));
-        return uint256(TradegenMath.sqrt(averagePriceChange.div(1e15)))
-                        .mul(TradegenMath.log(data.unrealizedProfits.div(1e18)) ** 2);
+                                                ? 1 : data.latestRecordedPeriodIndex.sub(data.previousRecordedPeriodIndex)).div(1e15);
     }
 
     /* ========== MODIFIERS ========== */
