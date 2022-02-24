@@ -4,7 +4,7 @@
 pragma solidity ^0.8.3;
 
 // OpenZeppelin
-import "./openzeppelin-solidity/contracts/Math.sol";
+import "./openzeppelin-solidity/contracts/Ownable.sol";
 import "./openzeppelin-solidity/contracts/SafeMath.sol";
 import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
 import "./openzeppelin-solidity/contracts/ERC20/SafeERC20.sol";
@@ -21,7 +21,7 @@ import "./interfaces/IStakingRewards.sol";
 //Libraries
 import "./libraries/TradegenMath.sol";
 
-contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
+contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -73,10 +73,9 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _rewardsToken, address _releaseEscrow, address _releaseSchedule, address _poolFactory)
+    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory) Ownable()
         StakingRewardsFactory(address(this), _rewardsToken) {
             rewardsToken = IERC20(_rewardsToken);
-            releaseEscrow = IReleaseEscrow(_releaseEscrow);
             releaseSchedule = IReleaseSchedule(_releaseSchedule);
             poolFactory = _poolFactory;
             startTime = block.timestamp;
@@ -180,7 +179,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
      * @param poolAddress address of the pool.
      * @return (uint256) amount of rewards claimed.
      */
-    function claimLatestRewards(address poolAddress) external override poolIsValid(poolAddress) onlyFarm(poolAddress) updateReward(poolAddress) returns (uint256) {
+    function claimLatestRewards(address poolAddress) external override releaseEscrowIsSet poolIsValid(poolAddress) onlyFarm(poolAddress) updateReward(poolAddress) returns (uint256) {
         uint256 reward = rewards[poolAddress];
 
         _getReward(poolAddress);
@@ -194,7 +193,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
      * @param newUnrealizedProfits the new unrealized profits for the pool, after calling the parent function.
      * @param poolTokenPrice the current price of the pool's token.
      */
-    function updateWeight(uint256 newUnrealizedProfits, uint256 poolTokenPrice) external override nonReentrant poolIsValid(msg.sender) updateReward(msg.sender) {
+    function updateWeight(uint256 newUnrealizedProfits, uint256 poolTokenPrice) external override nonReentrant releaseEscrowIsSet poolIsValid(msg.sender) updateReward(msg.sender) {
         require(newUnrealizedProfits >= 0, "PoolManager: unrealized profits cannot be negative.");
         require(poolTokenPrice > 0, "PoolManager: pool token price must be greater than 0.");
 
@@ -292,6 +291,18 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         return true;
     }
 
+    /**
+     * @dev Sets the address of the ReleaseEscrow contract.
+     * @notice This function can only be called once, and must be called before users can interact with PoolManager.
+     */
+    function setReleaseEscrow(address _releaseEscrow) external onlyOwner releaseEscrowIsNotSet {
+        require(_releaseEscrow != address(0), "PoolManager: invalid address.");
+
+        releaseEscrow = IReleaseEscrow(_releaseEscrow);
+
+        emit SetReleaseEscrow(_releaseEscrow);
+    }
+
     /* ========== INTERNAL FUNCTIONS ========== */
 
     /**
@@ -332,7 +343,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         }
 
         // Prevent division by 0 or negative values
-        if (data.previousRecordedPeriodIndex >= data.latestRecordedPeriodIndex) {
+        if (data.previousRecordedPeriodIndex > data.latestRecordedPeriodIndex) {
             return 0;
         }
 
@@ -372,10 +383,21 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory {
         _;
     }
 
+    modifier releaseEscrowIsSet() {
+        require(address(releaseEscrow) != address(0), "PoolManager: ReleaseEscrow contract must be set before calling this function.");
+        _;
+    }
+
+    modifier releaseEscrowIsNotSet() {
+        require(address(releaseEscrow) == address(0), "PoolManager: ReleaseEscrow contract already set.");
+        _;
+    }
+
     /* ========== EVENTS ========== */
 
     event RewardPaid(address indexed user, uint256 reward);
     event RegisteredPool(address indexed poolAddress, address farmAddress);
     event MarkedPoolAsEligible(address indexed poolAddress);
     event UpdatedWeight(address indexed poolAddress, uint256 newUnrealizedProfits);
+    event SetReleaseEscrow(address releaseEscrowAddress);
 }

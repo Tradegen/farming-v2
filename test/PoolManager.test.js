@@ -422,9 +422,9 @@ describe("PoolManager", () => {
         let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
         expect(Number(flooredResult)).to.equal(3); // [(3628814 * 1e18) / 1209600] / 1e18
     });
-  });*/
+  });
 
-  describe("#earned", () => {/*
+  describe("#earned", () => {
     it("0 pool weight in current period and global weight is 0", async () => {
         let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
         await tx.wait();
@@ -472,8 +472,8 @@ describe("PoolManager", () => {
 
         let earned = await poolManager.earned(deployer.address);
         expect(earned).to.equal(420);
-    });*/
-    /*
+    });
+    
     // Accounts for 9 seconds delay between local time and block.timestamp
     it("0 pool weight in current period and global weight is non-zero; multiple pools, period 0", async () => {
         let current = await poolManager.getCurrentTime();
@@ -709,7 +709,7 @@ describe("PoolManager", () => {
 
         let earned = await poolManager.earned(deployer.address);
         expect(earned).to.equal(4838839);
-    });*/
+    });
 
     // Accounts for 12 seconds delay between local time and block.timestamp
     it("non-zero pool weight in period 1, non-zero pool weight in previous period, and global weight is non-zero in both periods; multiple pools", async () => {
@@ -771,6 +771,40 @@ describe("PoolManager", () => {
 
         let earnedOther = await poolManager.earned(otherUser.address);
         expect(earnedOther).to.equal(1209712);
+    });
+  });*/
+
+  describe("#calculatePoolWeight", () => {/*
+    it("decline in price", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 2, 800, 1);
+        await tx.wait();
+
+        let weight = await poolManager.calculatePoolWeight(deployer.address);
+        expect(weight).to.equal(0);
+    });
+
+    it("previous recorded price is 0", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 2, 0, 1);
+        await tx.wait();
+
+        let weight = await poolManager.calculatePoolWeight(deployer.address);
+        expect(weight).to.equal(0);
+    });
+
+    it("previous recorded index > latest recorded index", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 1, 1200, 2);
+        await tx.wait();
+
+        let weight = await poolManager.calculatePoolWeight(deployer.address);
+        expect(weight).to.equal(0);
+    });*/
+
+    it("small values test 1", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 1, 1200, 2);
+        await tx.wait();
+
+        let weight = await poolManager.calculatePoolWeight(deployer.address);
+        expect(weight).to.equal(0);
     });
   });
 });
