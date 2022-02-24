@@ -43,8 +43,6 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
     }
 
     struct PoolPeriodInfo {
-        uint256 unrealizedProfits;
-        uint256 tokenPrice;
         uint256 weight;
     }
 
@@ -58,6 +56,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
 
     // Contracts
     IERC20 public rewardsToken;
+    IERC20 public TGEN;
+    address public xTGEN;
     IReleaseEscrow public releaseEscrow;
     IReleaseSchedule public releaseSchedule;
     address public immutable poolFactory;
@@ -79,11 +79,14 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory) Ownable()
+    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory, address _TGEN, address _xTGEN) Ownable()
         StakingRewardsFactory(address(this), _rewardsToken) {
             rewardsToken = IERC20(_rewardsToken);
             releaseSchedule = IReleaseSchedule(_releaseSchedule);
             poolFactory = _poolFactory;
+            TGEN = IERC20(_TGEN);
+            xTGEN = xTGEN;
+
             startTime = block.timestamp;
             lastUpdateTime = block.timestamp;
     }
@@ -226,7 +229,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
 
         poolAPC[msg.sender] = _calculateAveragePriceChange(msg.sender);
         pools[msg.sender].lastUpdated = block.timestamp;
-        
+
         totalWeightedAPC = totalWeightedAPC.add(poolAPC[msg.sender].mul(block.timestamp.sub(pools[msg.sender].createdOn)));
         totalDuration = totalDuration.add(block.timestamp.sub(pools[msg.sender].createdOn));
 
@@ -234,8 +237,6 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
 
         // Update pool info for current period
         poolPeriods[msg.sender][currentPeriodIndex] = PoolPeriodInfo({
-            unrealizedProfits: newUnrealizedProfits,
-            tokenPrice: poolTokenPrice,
             weight: newPoolWeight
         });
 
@@ -389,7 +390,17 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
     /* ========== MODIFIERS ========== */
 
     modifier updateReward(address poolAddress) {
+        uint256 initialRewardPerToken = rewardPerTokenStored;
         rewardPerTokenStored = rewardPerToken();
+
+        // Check if the total scaled weight is 0
+        // If so, transfer pending rewards to xTGEN to prevent tokens from being lost.
+        // Pools will not earn rewards whenever there's 0 total weight.
+        if (initialRewardPerToken == rewardPerTokenStored) {
+            releaseEscrow.withdraw();
+            TGEN.transfer(xTGEN, block.timestamp.sub(lastUpdateTime).mul(releaseSchedule.getCurrentRewardRate()));                               
+        }
+
         lastUpdateTime = block.timestamp;
         if (poolAddress != address(0)) {
             rewards[poolAddress] = earned(poolAddress);

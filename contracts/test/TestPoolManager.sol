@@ -55,10 +55,8 @@ contract TestPoolManager is PoolManager {
         });
     }
 
-    function setPoolPeriodInfo(address _poolAddress, uint256 _periodIndex, uint256 _unrealizedProfits, uint256 _tokenPrice, uint256 _weight) external {
+    function setPoolPeriodInfo(address _poolAddress, uint256 _periodIndex, uint256 _weight) external {
         poolPeriods[_poolAddress][_periodIndex] = PoolPeriodInfo({
-            unrealizedProfits: _unrealizedProfits,
-            tokenPrice: _tokenPrice,
             weight: _weight
         });
     }
