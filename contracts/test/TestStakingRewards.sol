@@ -10,7 +10,7 @@ contract TestStakingRewards is StakingRewards {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _poolManager, address _rewardsToken, address _poolAddress) StakingRewards(_poolManager, _rewardsToken, _poolAddress) {}
+    constructor(address _poolManager, address _rewardsToken, address _poolAddress, address _xTGEN) StakingRewards(_poolManager, _rewardsToken, _poolAddress, _xTGEN) {}
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
@@ -22,6 +22,10 @@ contract TestStakingRewards is StakingRewards {
      */
     function getRewardTest() public nonReentrant {
         _getReward();
+    }
+
+    function claimLatestRewardsTest(address _poolAddress) public {
+        poolManager.claimLatestRewards(_poolAddress);
     }
 
     /**

@@ -80,7 +80,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
     /* ========== CONSTRUCTOR ========== */
 
     constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory, address _TGEN, address _xTGEN) Ownable()
-        StakingRewardsFactory(address(this), _rewardsToken) {
+        StakingRewardsFactory(address(this), _rewardsToken, _xTGEN) {
             rewardsToken = IERC20(_rewardsToken);
             releaseSchedule = IReleaseSchedule(_releaseSchedule);
             poolFactory = _poolFactory;
@@ -114,7 +114,6 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
      */
     function rewardPerToken() public view override returns (uint256) {
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
-        uint256 startOfCycle = releaseSchedule.getStartOfCurrentCycle();
         uint256 scaledWeight = TradegenMath.scaleByTime(globalPeriods[currentPeriodIndex].totalWeight,
                                     currentPeriodIndex > 0 ? globalPeriods[currentPeriodIndex.sub(1)].totalWeight : 0,
                                     block.timestamp,
@@ -126,17 +125,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
             return rewardPerTokenStored;
         }
 
-        uint256 availableTokens = 0;
-        // Check for cross-cycle rewards
-        if (lastUpdateTime < startOfCycle) {
-            availableTokens = (startOfCycle.sub(lastUpdateTime)).mul(releaseSchedule.getCurrentRewardRate().mul(2));
-            availableTokens = availableTokens.add((block.timestamp.sub(startOfCycle)).mul(releaseSchedule.getCurrentRewardRate()));
-        }
-        else {
-            availableTokens = (block.timestamp.sub(lastUpdateTime)).mul(releaseSchedule.getCurrentRewardRate());
-        }
-
-        return rewardPerTokenStored.add(availableTokens.mul(1e18).div(scaledWeight));
+        return rewardPerTokenStored.add(releaseSchedule.availableRewards(lastUpdateTime).mul(1e18).div(scaledWeight));
     }
 
     /**
@@ -332,7 +321,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
         uint256 reward = rewards[poolAddress];
         if (reward > 0) {
             rewards[poolAddress] = 0;
-            rewardsToken.transfer(poolAddress, reward);
+            rewardsToken.transfer(pools[poolAddress].farmAddress, reward);
             IStakingRewards(pools[poolAddress].farmAddress).addReward(reward);
 
             emit RewardPaid(poolAddress, reward);
@@ -403,16 +392,15 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
         // Check if the total scaled weight is 0
         // If so, transfer pending rewards to xTGEN to prevent tokens from being lost.
         // Pools will not earn rewards whenever there's 0 total weight.
-        if (initialRewardPerToken == rewardPerTokenStored) {
+        if ((initialRewardPerToken == rewardPerTokenStored) && releaseEscrow.hasStarted()) {
             releaseEscrow.withdraw();
             TGEN.transfer(xTGEN, block.timestamp.sub(lastUpdateTime).mul(releaseSchedule.getCurrentRewardRate()));                               
         }
 
         lastUpdateTime = block.timestamp;
-        if (poolAddress != address(0)) {
-            rewards[poolAddress] = earned(poolAddress);
-            poolRewardPerTokenPaid[poolAddress] = rewardPerTokenStored;
-        }
+        rewards[poolAddress] = earned(poolAddress);
+        poolRewardPerTokenPaid[poolAddress] = rewardPerTokenStored;
+
         _;
     }
 

@@ -35,6 +35,10 @@ describe("PoolManager", () => {
   let poolManagerAddress;
   let PoolManagerFactory;
 
+  let stakingRewards;
+  let stakingRewardsAddress;
+  let StakingRewardsFactory;
+
   let startTimeCurrent;
   let startTimeOld;
   let startTimeFuture;
@@ -53,6 +57,7 @@ describe("PoolManager", () => {
     ReleaseEscrowFactory = await ethers.getContractFactory('TestReleaseEscrow');
     PoolManagerFactory = await ethers.getContractFactory('TestPoolManager');
     StakingTokenFactory = await ethers.getContractFactory('TestTokenERC1155');
+    StakingRewardsFactory = await ethers.getContractFactory('TestStakingRewards');
 
     startTimeCurrent = Math.floor(Date.now() / 1000) - 100;
     startTimeOld = Math.floor(Date.now() / 1000) - WEEKS_27;
@@ -302,7 +307,7 @@ describe("PoolManager", () => {
         expect(rewardPerToken).to.equal(parseEther("4"));
     });
 
-    // Accounts for difference of 6 seconds between local time and block.timestamp
+    // Accounts for difference of 7 seconds between local time and block.timestamp
     it("period 1", async () => {
         let current = await poolManager.getCurrentTime();
 
@@ -333,9 +338,9 @@ describe("PoolManager", () => {
         
         let rewardPerToken = await poolManager.rewardPerToken();
         let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
-        expect(Number(flooredResult)).to.equal(45649); // floor(4838824 * 1e18 / 106)
+        expect(Number(flooredResult)).to.equal(45222); // floor(4838824 * 1e18 / 107)
     });
-
+    
     // Accounts for difference of 7 seconds between local time and block.timestamp
     it("weights in two periods; test values", async () => {
         let current = await poolManager.getCurrentTime();
@@ -445,8 +450,8 @@ describe("PoolManager", () => {
         let flooredResult = BigInt(rewardPerToken) / BigInt(1e18);
         expect(Number(flooredResult)).to.equal(3); // [(3628814 * 1e18) / 1209600] / 1e18
     });
-  });
-
+  });*/
+  /*
   describe("#earned", () => {
     it("0 pool weight in current period and global weight is 0", async () => {
         let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
@@ -877,7 +882,7 @@ describe("PoolManager", () => {
         let weight = await poolManager.calculateAveragePriceChange(deployer.address);
         expect(weight).to.equal(500);
     });
-  });*/
+  });
 
   describe("#calculatePoolWeight", () => {
     it("total duration == 0", async () => {
@@ -943,5 +948,75 @@ describe("PoolManager", () => {
         let weight = await poolManager.calculatePoolWeight(deployer.address);
         expect(weight).to.equal(18000000);
     });
-  });
+  });*/
+  /*
+  describe("#claimLatestRewards", () => {
+    beforeEach(async () => {
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, startTimeCurrent);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+    
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, startTimeCurrent);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+    
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        stakingRewards = await StakingRewardsFactory.deploy(poolManagerAddress, rewardTokenAddress, stakingTokenAddress1, scheduleCurrentAddress);
+        await stakingRewards.deployed();
+        stakingRewardsAddress = stakingRewards.address;
+    
+        // Transfer tokens to ReleaseEscrowCurrent
+        let tx = await rewardToken.approve(releaseEscrowCurrentAddress, CYCLE_DURATION * 8);
+        await tx.wait();
+        let tx2 = await rewardToken.transfer(releaseEscrowCurrentAddress, CYCLE_DURATION * 8);
+        await tx2.wait();
+    
+        // Set the PoolManager's ReleaseEscrow address
+        let tx3 = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
+        await tx3.wait();
+    });
+    
+    it("calling from address other than pool's farm", async () => {
+        // Set the PoolManager's ReleaseEscrow address
+        let tx = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
+        await tx.wait();
+
+        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 2, 800, 1, 0, 0);
+        await tx2.wait();
+
+        let tx3 = poolManager.claimLatestRewards(deployer.address);
+        await expect(tx3).to.be.reverted;
+    });
+
+    it("distribution has not started", async () => {
+        
+    });
+
+    it("no rewards available", async () => {
+        
+    });
+
+    it("pool manager global weight is 0; no existing pool rewards", async () => {
+        
+    });
+
+    it("pool manager global weight is 0; existing pool rewards", async () => {
+        
+    });
+
+    it("rewards available; no other pools exist", async () => {
+        
+    });
+
+    it("rewards available; other pools exist", async () => {
+        
+    });
+
+    it("pool has rewards available but farm has no stakers", async () => {
+        
+    });
+  });*/
 });

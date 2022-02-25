@@ -26,6 +26,8 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     IERC1155 public stakingToken;
     IPoolManager public poolManager;
     address public poolAddress;
+    address public xTGEN;
+
     uint256 public totalAvailableRewards;
     uint256 public rewardPerTokenStored;
 
@@ -42,11 +44,12 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _poolManager, address _rewardsToken, address _poolAddress) {
+    constructor(address _poolManager, address _rewardsToken, address _poolAddress, address _xTGEN) {
         rewardsToken = IERC20(_rewardsToken);
         stakingToken = IERC1155(_poolAddress);
         poolManager = IPoolManager(_poolManager);
         poolAddress = _poolAddress;
+        xTGEN = _xTGEN;
     }
 
     /* ========== VIEWS ========== */
@@ -143,7 +146,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
 
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            rewardsToken.transfer(msg.sender, reward);
+            rewardsToken.safeTransfer(msg.sender, reward);
             emit RewardPaid(msg.sender, reward);
         }
     }
@@ -168,10 +171,14 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
      * @param reward number of tokens to add to the pool.
      */
     function addReward(uint256 reward) external override onlyPoolManager {
-        if (weightedTotalSupply > 0) {
-            rewardPerTokenStored = rewardPerTokenStored.add(reward.div(weightedTotalSupply));
+        // Transfer to xTGEN contract if total supply is 0.
+        // This prevents rewards tokens from getting stuck in this contract.
+        if (weightedTotalSupply == 0) {
+            rewardsToken.safeTransfer(xTGEN, reward);
+            return;
         }
 
+        rewardPerTokenStored = rewardPerTokenStored.add(reward.div(weightedTotalSupply));
         totalAvailableRewards = totalAvailableRewards.add(reward);
 
         emit RewardAdded(reward);
