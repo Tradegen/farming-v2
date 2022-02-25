@@ -85,7 +85,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
             releaseSchedule = IReleaseSchedule(_releaseSchedule);
             poolFactory = _poolFactory;
             TGEN = IERC20(_TGEN);
-            xTGEN = xTGEN;
+            xTGEN = _xTGEN;
 
             startTime = block.timestamp;
             lastUpdateTime = block.timestamp;
@@ -349,11 +349,18 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
      * @return (uint256) weight of the pool.
      */
     function _calculatePoolWeight(address poolAddress) internal view returns (uint256) {
+        // Prevent division by 0.
+        if (totalDuration == 0) {
+            return 0;
+        }
+
+        // Pool's average price change is above the global average price change.
         if (poolAPC[poolAddress] >= totalWeightedAPC.div(totalDuration)) {
             return pools[poolAddress].unrealizedProfits.div(1e18).mul(TradegenMath.sqrt(poolAPC[poolAddress].sub(totalWeightedAPC.div(totalDuration))));
         }
 
-        return pools[poolAddress].unrealizedProfits.div(1e18).mul(TradegenMath.log(poolAPC[poolAddress])).div((totalWeightedAPC.div(totalDuration)).sub(poolAPC[poolAddress]));
+        // Pool's average price change is below the global average price change.
+        return pools[poolAddress].unrealizedProfits.div(1e18).mul(TradegenMath.log(poolAPC[poolAddress])).div(TradegenMath.sqrt((totalWeightedAPC.div(totalDuration)).sub(poolAPC[poolAddress])));
     }
 
     /**
@@ -370,12 +377,12 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
             return 0;
         }
 
-        // Prevent division by 0
+        // Prevent division by 0.
         if (data.previousRecordedPrice == 0) {
             return 0;
         }
 
-        // Prevent division by 0 or negative values
+        // Prevent division by 0 or negative values.
         if (data.previousRecordedPeriodIndex > data.latestRecordedPeriodIndex) {
             return 0;
         }

@@ -108,7 +108,7 @@ describe("PoolManager", () => {
     await releaseEscrowCurrent.deployed();
     releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-    poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+    poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
     await poolManager.deployed();
     poolManagerAddress = poolManager.address;
 
@@ -163,42 +163,45 @@ describe("PoolManager", () => {
         expect(poolInfo2[1]).to.be.false;
         expect(poolInfo2[2]).to.not.equal(poolInfo1[2]);
     });
-  });*/
-  /*
+  });
+  
   describe("#markPoolAsEligible", () => {
     it("only registered pool", async () => {
-        let tx = poolManager.markPoolAsEligible(0, 1000, 10);
+        let tx = poolManager.markPoolAsEligible(1000, 10);
         await expect(tx).to.be.reverted;
     });
 
     it("pool doesn't meet minimum criteria", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, startTimeCurrent);
         await tx.wait();
 
-        let tx2 = await poolManager.markPoolAsEligible(startTimeCurrent, parseEther("10000"), 20);
+        let tx2 = await poolManager.markPoolAsEligible(parseEther("10000"), 20);
         await tx2.wait();
 
         let poolInfo = await poolManager.getPoolInfo(deployer.address);
         expect(poolInfo[1]).to.be.false;
 
-        let tx3 = await poolManager.markPoolAsEligible(0, 0, 20);
+        let tx3 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx3.wait();
+
+        let tx4 = await poolManager.markPoolAsEligible(0, 20);
+        await tx4.wait();
 
         poolInfo = await poolManager.getPoolInfo(deployer.address);
         expect(poolInfo[1]).to.be.false;
 
-        let tx4 = await poolManager.markPoolAsEligible(0, parseEther("10000"), 0);
-        await tx4.wait();
+        let tx5 = await poolManager.markPoolAsEligible(parseEther("10000"), 0);
+        await tx5.wait();
 
         poolInfo = await poolManager.getPoolInfo(deployer.address);
         expect(poolInfo[1]).to.be.false;
     });
 
     it("pool meets criteria; no other pools", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx.wait();
 
-        let tx2 = await poolManager.markPoolAsEligible(0, parseEther("10000"), 20);
+        let tx2 = await poolManager.markPoolAsEligible(parseEther("10000"), 20);
         await tx2.wait();
 
         let poolInfo = await poolManager.getPoolInfo(deployer.address);
@@ -207,13 +210,13 @@ describe("PoolManager", () => {
     });
 
     it("pool meets criteria; one other pool", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx.wait();
 
-        let tx2 = await poolManager.connect(otherUser).setPoolInfo(otherUser.address, true, false, otherUser.address, 0, 0, 0, 0, 0);
+        let tx2 = await poolManager.connect(otherUser).setPoolInfo(otherUser.address, true, false, otherUser.address, 0, 0, 0, 0, 0, 0, 0);
         await tx2.wait();
 
-        let tx3 = await poolManager.markPoolAsEligible(0, parseEther("10000"), 20);
+        let tx3 = await poolManager.markPoolAsEligible(parseEther("10000"), 20);
         await tx3.wait();
 
         let poolInfo1 = await poolManager.getPoolInfo(deployer.address);
@@ -221,7 +224,7 @@ describe("PoolManager", () => {
         expect(poolInfo1[1]).to.be.true;
         expect(poolInfo1[2]).to.equal(deployer.address);
 
-        let tx4 = await poolManager.connect(otherUser).markPoolAsEligible(0, parseEther("10000"), 20);
+        let tx4 = await poolManager.connect(otherUser).markPoolAsEligible(parseEther("10000"), 20);
         await tx4.wait();
 
         let poolInfo2 = await poolManager.connect(otherUser).getPoolInfo(otherUser.address);
@@ -229,8 +232,8 @@ describe("PoolManager", () => {
         expect(poolInfo2[1]).to.be.true;
         expect(poolInfo2[2]).to.equal(otherUser.address);
     });
-  });
-
+  });*/
+  /*
   describe("#getPeriodIndex", () => {
     it("timestamp must be greater than start time", async () => {
         await expect(poolManager.getPeriodIndex(startTimeCurrent - ONE_WEEK)).to.be.reverted;
@@ -311,7 +314,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -345,7 +348,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -381,7 +384,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -417,7 +420,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -446,7 +449,7 @@ describe("PoolManager", () => {
 
   describe("#earned", () => {
     it("0 pool weight in current period and global weight is 0", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx.wait();
 
         let earned = await poolManager.earned(deployer.address);
@@ -454,7 +457,7 @@ describe("PoolManager", () => {
     });
 
     it("0 pool weight in current period and global weight is non-zero; one pool, period 0", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx.wait();
 
         let tx2 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
@@ -471,14 +474,14 @@ describe("PoolManager", () => {
     it("non-zero pool weight in current period and global weight is non-zero; one pool, period 0", async () => {
         let current = await poolManager.getCurrentTime();
 
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx.wait();
 
         let tx2 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
         await tx2.wait();
 
         // Same as global weight
-        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, ONE_WEEK + ONE_WEEK);
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, ONE_WEEK + ONE_WEEK);
         await tx3.wait();
 
         let tx4 = await poolManager.setStartTime(current - 100);
@@ -506,7 +509,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -520,14 +523,14 @@ describe("PoolManager", () => {
         let tx3 = await poolManager.setLastUpdateTime(current - 100);
         await tx3.wait();
 
-        let tx4 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx4 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx4.wait();
 
-        let tx5 = await poolManager.setPoolInfo(otherUser.address, true, false, otherUser.address, 0, 0, 0, 0, 0);
+        let tx5 = await poolManager.setPoolInfo(otherUser.address, true, false, otherUser.address, 0, 0, 0, 0, 0, 0, 0);
         await tx5.wait();
 
         // Same as global weight
-        let tx6 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, 0, 0, ONE_WEEK + ONE_WEEK);
+        let tx6 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, ONE_WEEK + ONE_WEEK);
         await tx6.wait();
 
         let tx7 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
@@ -555,7 +558,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -569,18 +572,18 @@ describe("PoolManager", () => {
         let tx3 = await poolManager.setLastUpdateTime(current - 100);
         await tx3.wait();
 
-        let tx4 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx4 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx4.wait();
 
-        let tx5 = await poolManager.setPoolInfo(otherUser.address, true, false, otherUser.address, 0, 0, 0, 0, 0);
+        let tx5 = await poolManager.setPoolInfo(otherUser.address, true, false, otherUser.address, 0, 0, 0, 0, 0, 0, 0);
         await tx5.wait();
 
         // Global weight / 2
-        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, ONE_WEEK);
+        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 0, ONE_WEEK);
         await tx6.wait();
 
         // Global weight / 2
-        let tx7 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, 0, 0, ONE_WEEK);
+        let tx7 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, ONE_WEEK);
         await tx7.wait();
 
         let tx8 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
@@ -608,7 +611,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -616,7 +619,7 @@ describe("PoolManager", () => {
         let tx = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
         await tx.wait();
 
-        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx2.wait();
 
         let tx3 = await poolManager.setGlobalPeriodInfo(0, 0);
@@ -626,11 +629,11 @@ describe("PoolManager", () => {
         await tx4.wait();
 
         // 0 weight in period 0
-        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, 0);
+        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0);
         await tx5.wait();
 
         // Same as global weight in period 1
-        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 1, 0, 0, ONE_WEEK + ONE_WEEK);
+        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 1, ONE_WEEK + ONE_WEEK);
         await tx6.wait();
 
         let tx7 = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
@@ -659,7 +662,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -667,7 +670,7 @@ describe("PoolManager", () => {
         let tx = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
         await tx.wait();
 
-        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx2.wait();
 
         let tx3 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
@@ -677,11 +680,11 @@ describe("PoolManager", () => {
         await tx4.wait();
 
         // 0 weight in period 0
-        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, 0);
+        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0);
         await tx5.wait();
 
         // Same as global weight in period 1
-        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 1, 0, 0, ONE_WEEK + ONE_WEEK);
+        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 1, ONE_WEEK + ONE_WEEK);
         await tx6.wait();
 
         let tx7 = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
@@ -711,7 +714,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -719,7 +722,7 @@ describe("PoolManager", () => {
         let tx = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
         await tx.wait();
 
-        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx2.wait();
 
         let tx3 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK);
@@ -729,11 +732,11 @@ describe("PoolManager", () => {
         await tx4.wait();
 
         // Same as global weight in period 0
-        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, ONE_WEEK + ONE_WEEK);
+        let tx5 = await poolManager.setPoolPeriodInfo(deployer.address, 0, ONE_WEEK + ONE_WEEK);
         await tx5.wait();
 
         // Same as global weight in period 1
-        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 1, 0, 0, ONE_WEEK + ONE_WEEK);
+        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 1, ONE_WEEK + ONE_WEEK);
         await tx6.wait();
 
         let tx7 = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
@@ -763,7 +766,7 @@ describe("PoolManager", () => {
         await releaseEscrowCurrent.deployed();
         releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
-        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address);
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
 
@@ -771,10 +774,10 @@ describe("PoolManager", () => {
         let tx = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
         await tx.wait();
 
-        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx2.wait();
 
-        let tx3 = await poolManager.setPoolInfo(otherUser.address, true, false, deployer.address, 0, 0, 0, 0, 0);
+        let tx3 = await poolManager.setPoolInfo(otherUser.address, true, false, deployer.address, 0, 0, 0, 0, 0, 0, 0);
         await tx3.wait();
 
         let tx4 = await poolManager.setGlobalPeriodInfo(0, ONE_WEEK + ONE_WEEK );
@@ -784,19 +787,19 @@ describe("PoolManager", () => {
         await tx5.wait();
 
         // (Global weight / 2) in period 0
-        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0, 0, ONE_WEEK * 1.5);
+        let tx6 = await poolManager.setPoolPeriodInfo(deployer.address, 0, ONE_WEEK * 1.5);
         await tx6.wait();
 
         // (Global weight / 2) in period 1
-        let tx7 = await poolManager.setPoolPeriodInfo(deployer.address, 1, 0, 0, ONE_WEEK * 1.5);
+        let tx7 = await poolManager.setPoolPeriodInfo(deployer.address, 1, ONE_WEEK * 1.5);
         await tx7.wait();
 
         // (Global weight / 2) in period 0
-        let tx8 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, 0, 0, ONE_WEEK * 0.5);
+        let tx8 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, ONE_WEEK * 0.5);
         await tx8.wait();
 
         // (Global weight / 2) in period 1
-        let tx9 = await poolManager.setPoolPeriodInfo(otherUser.address, 1, 0, 0, ONE_WEEK * 0.5);
+        let tx9 = await poolManager.setPoolPeriodInfo(otherUser.address, 1, ONE_WEEK * 0.5);
         await tx9.wait();
 
         let tx10 = await poolManager.setStartTime(current - ONE_WEEK - ONE_WEEK - 100);
@@ -816,63 +819,129 @@ describe("PoolManager", () => {
         let earnedOther = await poolManager.earned(otherUser.address);
         expect(earnedOther).to.equal(1209712);
     });
-  });*/
+  });
 
-  describe("#calculatePoolWeight", () => {/*
+  describe("#calculateAveragePriceChange", () => {
     it("decline in price", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 2, 800, 1);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 800, 2, 1000, 1, 0, 0);
         await tx.wait();
 
-        let weight = await poolManager.calculatePoolWeight(deployer.address);
-        expect(weight).to.equal(0);
+        let APC = await poolManager.calculateAveragePriceChange(deployer.address);
+        expect(APC).to.equal(0);
     });
 
     it("previous recorded price is 0", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 2, 0, 1);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 2, 0, 1, 0, 0);
         await tx.wait();
 
-        let weight = await poolManager.calculatePoolWeight(deployer.address);
-        expect(weight).to.equal(0);
+        let APC = await poolManager.calculateAveragePriceChange(deployer.address);
+        expect(APC).to.equal(0);
     });
 
     it("previous recorded index > latest recorded index", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 1, 1200, 2);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 1, 200, 2, 0, 0);
+        await tx.wait();
+
+        let APC = await poolManager.calculateAveragePriceChange(deployer.address);
+        expect(APC).to.equal(0);
+    });
+    
+    it("small values test 1", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, parseEther("1.2"), 1, parseEther("1"), 1, 0, 0);
+        await tx.wait();
+
+        let weight = await poolManager.calculateAveragePriceChange(deployer.address);
+        expect(weight).to.equal(200);
+    });
+    
+    it("small values test 2", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, parseEther("0.9"), 1, parseEther("0.6"), 1, 0, 0);
+        await tx.wait();
+
+        let weight = await poolManager.calculateAveragePriceChange(deployer.address);
+        expect(weight).to.equal(500);
+    });
+    
+    it("medium values test; across 3 periods", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, parseEther("2.4"), 2, parseEther("2"), 0, 0, 0);
+        await tx.wait();
+
+        let weight = await poolManager.calculateAveragePriceChange(deployer.address);
+        expect(weight).to.equal(100);
+    });
+    
+    it("large values test", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, parseEther("3"), 1, parseEther("2"), 1, 0, 0);
+        await tx.wait();
+
+        let weight = await poolManager.calculateAveragePriceChange(deployer.address);
+        expect(weight).to.equal(500);
+    });
+  });*/
+
+  describe("#calculatePoolWeight", () => {
+    it("total duration == 0", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 2, 800, 1, 0, 0);
         await tx.wait();
 
         let weight = await poolManager.calculatePoolWeight(deployer.address);
         expect(weight).to.equal(0);
     });
-
+    
     it("small values test 1", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, parseEther("8"), parseEther("1.2"), 1, parseEther("1"), 1);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, parseEther("8"), parseEther("1.2"), 1, parseEther("1"), 1, 0, 0);
         await tx.wait();
 
+        let tx2 = await poolManager.setGlobalAPCVariables(150, 1);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolAPC(deployer.address, 200);
+        await tx3.wait();
+
         let weight = await poolManager.calculatePoolWeight(deployer.address);
-        expect(weight).to.equal(126);
+        expect(weight).to.equal(56);
     });
     
     it("small values test 2", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, parseEther("30"), parseEther("0.9"), 1, parseEther("0.6"), 1);
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, parseEther("30"), parseEther("0.9"), 1, parseEther("0.6"), 1, 0, 0);
         await tx.wait();
 
-        let weight = await poolManager.calculatePoolWeight(deployer.address);
-        expect(weight).to.equal(352);
-    });*/
-    
-    it("medium values test; across 3 periods", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, parseEther("10000"), parseEther("2.4"), 2, parseEther("2"), 0);
-        await tx.wait();
+        let tx2 = await poolManager.setGlobalAPCVariables(150, 1);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolAPC(deployer.address, 500);
+        await tx3.wait();
 
         let weight = await poolManager.calculatePoolWeight(deployer.address);
-        expect(weight).to.equal(100000);
+        expect(weight).to.equal(540);
     });
-    /*
-    it("large values test", async () => {
-        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, parseEther("1000000"), parseEther("3"), 1, parseEther("2"), 1);
+    
+    it("medium values test; across 3 periods; below global APC", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, parseEther("10000"), parseEther("2.4"), 2, parseEther("2"), 0, 0, 0);
         await tx.wait();
 
+        let tx2 = await poolManager.setGlobalAPCVariables(150, 1);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolAPC(deployer.address, 100);
+        await tx3.wait();
+
         let weight = await poolManager.calculatePoolWeight(deployer.address);
-        expect(weight).to.equal(22000000);
-    });*/
+        expect(weight).to.equal(8571);
+    });
+    
+    it("large values test", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, parseEther("1000000"), parseEther("3"), 1, parseEther("2"), 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalAPCVariables(150, 1);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolAPC(deployer.address, 500);
+        await tx3.wait();
+
+        let weight = await poolManager.calculatePoolWeight(deployer.address);
+        expect(weight).to.equal(18000000);
+    });
   });
 });

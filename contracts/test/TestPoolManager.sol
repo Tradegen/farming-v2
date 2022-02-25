@@ -6,11 +6,15 @@ pragma solidity ^0.8.3;
 import "../PoolManager.sol";
 
 contract TestPoolManager is PoolManager {
-    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory)
-        PoolManager(_rewardsToken, _releaseSchedule, _poolFactory) {}
+    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory, address _TGEN, address _xTGEN)
+        PoolManager(_rewardsToken, _releaseSchedule, _poolFactory, _TGEN, _xTGEN) {}
 
     function calculatePoolWeight(address _poolAddress) external view returns(uint256) {
         return _calculatePoolWeight(_poolAddress);
+    }
+
+    function calculateAveragePriceChange(address _poolAddress) external view returns(uint256) {
+        return _calculateAveragePriceChange(_poolAddress);
     }
 
     function setStartTime(uint _startTime) external {
