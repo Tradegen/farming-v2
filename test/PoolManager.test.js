@@ -949,74 +949,1007 @@ describe("PoolManager", () => {
         expect(weight).to.equal(18000000);
     });
   });*/
-  /*
+  
   describe("#claimLatestRewards", () => {
+      let current;
     beforeEach(async () => {
-        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, startTimeCurrent);
+        current = await poolManager.getCurrentTime();
+
+        rewardToken = await RewardTokenFactory.deploy("Test Token", "TEST");
+        await rewardToken.deployed();
+        rewardTokenAddress = rewardToken.address;
+
+        scheduleCurrent = await ScheduleFactory.deploy(parseEther((4 * CYCLE_DURATION).toString()), current - 100);
         await scheduleCurrent.deployed();
         scheduleCurrentAddress = scheduleCurrent.address;
-    
-        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(otherUser.address, rewardTokenAddress, scheduleCurrentAddress, startTimeCurrent);
-        await releaseEscrowCurrent.deployed();
-        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
     
         poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
         await poolManager.deployed();
         poolManagerAddress = poolManager.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(poolManagerAddress, rewardTokenAddress, scheduleCurrentAddress, current - 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
 
         stakingRewards = await StakingRewardsFactory.deploy(poolManagerAddress, rewardTokenAddress, stakingTokenAddress1, scheduleCurrentAddress);
         await stakingRewards.deployed();
         stakingRewardsAddress = stakingRewards.address;
     
         // Transfer tokens to ReleaseEscrowCurrent
-        let tx = await rewardToken.approve(releaseEscrowCurrentAddress, CYCLE_DURATION * 8);
+        let tx = await rewardToken.approve(releaseEscrowCurrentAddress, parseEther((8 * CYCLE_DURATION).toString()));
         await tx.wait();
-        let tx2 = await rewardToken.transfer(releaseEscrowCurrentAddress, CYCLE_DURATION * 8);
+        let tx2 = await rewardToken.transfer(releaseEscrowCurrentAddress, parseEther((8 * CYCLE_DURATION).toString()));
         await tx2.wait();
     
         // Set the PoolManager's ReleaseEscrow address
         let tx3 = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
         await tx3.wait();
     });
-    
+    /*
     it("calling from address other than pool's farm", async () => {
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, otherUser.address, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = poolManager.claimLatestRewards(deployer.address);
+        await expect(tx2).to.be.reverted;
+    });
+
+    it("distribution has not started", async () => {
+        scheduleCurrent = await ScheduleFactory.deploy(CYCLE_DURATION * 4, current + 100);
+        await scheduleCurrent.deployed();
+        scheduleCurrentAddress = scheduleCurrent.address;
+    
+        poolManager = await PoolManagerFactory.deploy(rewardTokenAddress, scheduleCurrentAddress, deployer.address, rewardTokenAddress, scheduleCurrentAddress);
+        await poolManager.deployed();
+        poolManagerAddress = poolManager.address;
+
+        releaseEscrowCurrent = await ReleaseEscrowFactory.deploy(poolManagerAddress, rewardTokenAddress, scheduleCurrentAddress, current + 100);
+        await releaseEscrowCurrent.deployed();
+        releaseEscrowCurrentAddress = releaseEscrowCurrent.address;
+
+        stakingRewards = await StakingRewardsFactory.deploy(poolManagerAddress, rewardTokenAddress, stakingTokenAddress1, scheduleCurrentAddress);
+        await stakingRewards.deployed();
+        stakingRewardsAddress = stakingRewards.address;
+
         // Set the PoolManager's ReleaseEscrow address
         let tx = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
         await tx.wait();
 
-        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, deployer.address, 0, 1000, 2, 800, 1, 0, 0);
+        let tx2 = await poolManager.setPoolInfo(deployer.address, true, false, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
         await tx2.wait();
 
-        let tx3 = poolManager.claimLatestRewards(deployer.address);
-        await expect(tx3).to.be.reverted;
-    });
+        let tx3 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx3.wait();
 
-    it("distribution has not started", async () => {
-        
-    });
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(0);
 
+        // 7 seconds difference between local time and block.timestamp
+        let lastUpdateTime = await poolManager.lastUpdateTime();
+        expect(lastUpdateTime).to.equal(Number(current) + 7);
+
+        let rewards = await poolManager.rewards(deployer.address);
+        expect(rewards).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect(poolRewardPerTokenPaid).to.equal(0);
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        expect(balanceFarm).to.equal(0);
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(0);
+
+        let rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(rewardPerTokenStored).to.equal(0);
+    });
+    
+    // Accounts for 14 seconds difference between local time and block.timestamp
     it("no rewards available", async () => {
-        
-    });
+        let scaledWeight = BigInt(1e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = expectedAvailableTokens * BigInt(1e18) / scaledWeight;
+        //console.log((expectedRewardPerToken / BigInt(1e12)).toString());
 
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, parseEther("1"));
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0);
+        await tx3.wait();
+
+        let tx4 = await poolManager.setStartTime(current - 100);
+        await tx4.wait();
+
+        let tx5 = await poolManager.setLastUpdateTime(current - 100);
+        await tx5.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect((BigInt(rewardPerToken) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let tx6 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx6.wait();
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(0);
+
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+        console.log(availableRewards.toString());
+
+        // Rewards stay in PoolManager contract so other pool with >0 weight can be paid out.
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(balancePoolManager).to.equal(availableRewards);
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        expect(balanceFarm).to.equal(0);
+
+        // 14 seconds difference between local time and block.timestamp
+        let lastUpdateTime = await poolManager.lastUpdateTime();
+        expect(lastUpdateTime).to.equal(Number(current) + 14);
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect((BigInt(poolRewardPerTokenPaid.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(0);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(farmRewardPerTokenStored).to.equal(0);
+    });
+    
+    // Accounts for 14 seconds difference between local time and block.timestamp
     it("pool manager global weight is 0; no existing pool rewards", async () => {
-        
-    });
+        let scaledWeight = BigInt(1e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = expectedAvailableTokens * BigInt(1e18) / scaledWeight;
+        //console.log((expectedRewardPerToken / BigInt(1e12)).toString());
 
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, 0);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0);
+        await tx3.wait();
+
+        let tx4 = await poolManager.setStartTime(current - 100);
+        await tx4.wait();
+
+        let tx5 = await poolManager.setLastUpdateTime(current - 100);
+        await tx5.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(0);
+
+        let tx6 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx6.wait();
+        
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+        console.log(availableRewards.toString());
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(availableRewards);
+
+        // Rewards stay in PoolManager contract so other pool with >0 weight can be paid out.
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(balancePoolManager).to.equal(0);
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        expect(balanceFarm).to.equal(0);
+
+        // 14 seconds difference between local time and block.timestamp
+        let lastUpdateTime = await poolManager.lastUpdateTime();
+        expect(lastUpdateTime).to.equal(Number(current) + 14);
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect(poolRewardPerTokenPaid).to.equal(0);
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(0);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(farmRewardPerTokenStored).to.equal(0);
+    });
+    
+    // Accounts for 14 seconds difference between local time and block.timestamp
     it("pool manager global weight is 0; existing pool rewards", async () => {
+        let scaledWeight = BigInt(1e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = expectedAvailableTokens * BigInt(1e18) / scaledWeight;
+        //console.log((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, false, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, 0);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, 0);
+        await tx3.wait();
+
+        let tx4 = await poolManager.setStartTime(current - 100);
+        await tx4.wait();
+
+        let tx5 = await poolManager.setLastUpdateTime(current - 100);
+        await tx5.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect(rewardPerToken).to.equal(0);
+
+        let tx6 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx6.wait();
         
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+        console.log(availableRewards.toString());
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(availableRewards);
+
+        // Rewards stay in PoolManager contract so other pool with >0 weight can be paid out.
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(balancePoolManager).to.equal(0);
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        expect(balanceFarm).to.equal(0);
+
+        // 14 seconds difference between local time and block.timestamp
+        let lastUpdateTime = await poolManager.lastUpdateTime();
+        expect(lastUpdateTime).to.equal(Number(current) + 14);
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let earned = await poolManager.earned(deployer.address);
+        expect(earned).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect(poolRewardPerTokenPaid).to.equal(0);
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(0);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(farmRewardPerTokenStored).to.equal(0);
+    });
+    
+    it("rewards available; one pool eligible, no other pools", async () => {
+        let scaledWeight = BigInt(1e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = expectedAvailableTokens * BigInt(1e18) / scaledWeight;
+        //console.log((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, parseEther("1"));
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, parseEther("1"));
+        await tx3.wait();
+
+        let tx4 = await poolManager.setStartTime(current - 100);
+        await tx4.wait();
+
+        let tx5 = await poolManager.setLastUpdateTime(current - 100);
+        await tx5.wait();
+
+        let tx6 = await stakingToken1.setApprovalForAll(stakingRewardsAddress, true);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(1, 3);
+        await tx7.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect((BigInt(rewardPerToken) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+        console.log(availableRewards.toString());
+
+        let earnedPool = await poolManager.earned(deployer.address);
+        let delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let tx8 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx8.wait();
+
+        let newEarnedPool = await poolManager.earned(deployer.address);
+        expect(newEarnedPool).to.equal(0);
+
+        // Check reward token balances
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(0);
+
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(Number(balancePoolManager)).to.be.lessThanOrEqual(2);
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        delta = BigInt(balanceFarm) - BigInt(earnedPool);
+        expect(Number(delta)).to.be.lessThanOrEqual(Number(parseEther("4")));
+        //delta = BigInt(balanceFarm) + BigInt(1) - BigInt(balanceFarm);
+        //expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        // Check PoolManager state
+
+        // 16 seconds difference between local time and block.timestamp
+        let lastUpdateTime = await poolManager.lastUpdateTime();
+        expect(lastUpdateTime).to.equal(Number(current) + 16);
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect((BigInt(poolRewardPerTokenPaid.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        // Check farm's state
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(balanceFarm);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        let expectedFarmRewardPerTokenStored = BigInt(balanceFarm) / BigInt(10);
+        delta = BigInt(farmRewardPerTokenStored) - BigInt(expectedFarmRewardPerTokenStored);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        let earnedFarm = await stakingRewards.earned(deployer.address);
+        delta = BigInt(earnedFarm) - BigInt(balanceFarm);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
     });
 
-    it("rewards available; no other pools exist", async () => {
+    it("rewards available; one pool eligible, other pool has 0 weight", async () => {
+        let scaledWeight = BigInt(1e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = expectedAvailableTokens * BigInt(1e18) / scaledWeight;
         
+        let stakingRewards2 = await StakingRewardsFactory.deploy(poolManagerAddress, rewardTokenAddress, stakingTokenAddress1, scheduleCurrentAddress);
+        await stakingRewards2.deployed();
+        let stakingRewardsAddress2 = stakingRewards2.address;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setPoolInfo(otherUser.address, true, true, stakingRewardsAddress2, 0, 1000, 2, 800, 1, 0, 0);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(0, parseEther("1"));
+        await tx3.wait();
+
+        let tx4 = await poolManager.setPoolPeriodInfo(deployer.address, 0, parseEther("1"));
+        await tx4.wait();
+
+        let tx5 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, 0);
+        await tx5.wait();
+
+        let tx6 = await poolManager.setStartTime(current - 100);
+        await tx6.wait();
+
+        let tx7 = await poolManager.setLastUpdateTime(current - 100);
+        await tx7.wait();
+
+        let tx8 = await stakingToken1.setApprovalForAll(stakingRewardsAddress, true);
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.stake(1, 3);
+        await tx9.wait();
+
+        let tx10 = await stakingToken1.setApprovalForAll(stakingRewardsAddress2, true);
+        await tx10.wait();
+
+        let tx11 = await stakingRewards2.stake(1, 3);
+        await tx11.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect((BigInt(rewardPerToken) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+
+        let earnedPool1 = await poolManager.earned(deployer.address);
+        let delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool1);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let earnedPool2 = await poolManager.earned(otherUser.address);
+        expect(earnedPool2).to.equal(0);
+
+        let tx12 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx12.wait();
+
+        let newEarnedPool1 = await poolManager.earned(deployer.address);
+        expect(newEarnedPool1).to.equal(0);
+
+        let tx13 = await stakingRewards2.claimLatestRewardsTest(otherUser.address);
+        await tx13.wait();
+
+        let newEarnedPool2 = await poolManager.earned(otherUser.address);
+        expect(newEarnedPool2).to.equal(0);
+
+        // Check reward token balances
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(0);
+
+        // Account for 1 second delay
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(Number(balancePoolManager)).to.be.lessThanOrEqual(Number(parseEther("4")));
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        delta = BigInt(balanceFarm) - BigInt(earnedPool1);
+        expect(Number(delta)).to.be.lessThanOrEqual(Number(parseEther("4")));
+        
+        let balanceFarm2 = await rewardToken.balanceOf(stakingRewardsAddress2);
+        expect(balanceFarm2).to.equal(0);
+
+        // Check PoolManager state
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let newRewards2 = await poolManager.rewards(otherUser.address);
+        expect(newRewards2).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect((BigInt(poolRewardPerTokenPaid.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        // 22 seconds delay from when contracts were deployed
+        let scaledWeight2 = BigInt(1e18) * BigInt(122) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens2 = BigInt(4 * 1e18);
+        let expectedRewardPerToken2 = expectedRewardPerToken + (expectedAvailableTokens2 * BigInt(1e18) / scaledWeight2);
+
+        let poolRewardPerTokenPaid2 = await poolManager.poolRewardPerTokenPaid(otherUser.address);
+        expect((BigInt(poolRewardPerTokenPaid2.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken2 / BigInt(1e12)).toString());
+
+        // Check first farm's state
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(balanceFarm);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        let expectedFarmRewardPerTokenStored = BigInt(balanceFarm) / BigInt(10);
+        delta = BigInt(farmRewardPerTokenStored) - BigInt(expectedFarmRewardPerTokenStored);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        let earnedFarm = await stakingRewards.earned(deployer.address);
+        delta = BigInt(earnedFarm) - BigInt(balanceFarm);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        // Check second farm's state
+
+        let totalAvailableRewards2 = await stakingRewards2.totalAvailableRewards();
+        expect(totalAvailableRewards2).to.equal(0);
+
+        let farmRewardPerTokenStored2 = await stakingRewards2.rewardPerTokenStored();
+        expect(farmRewardPerTokenStored2).to.equal(0);
+
+        let earnedFarm2 = await stakingRewards2.earned(deployer.address);
+        expect(earnedFarm2).to.equal(0);
     });
 
-    it("rewards available; other pools exist", async () => {
+    it("rewards available; both pools eligible, one has stakers and other doesn't", async () => {
+        let scaledWeight = BigInt(2e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = expectedAvailableTokens * BigInt(1e18) / scaledWeight;
         
+        let stakingRewards2 = await StakingRewardsFactory.deploy(poolManagerAddress, rewardTokenAddress, stakingTokenAddress1, scheduleCurrentAddress);
+        await stakingRewards2.deployed();
+        let stakingRewardsAddress2 = stakingRewards2.address;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setPoolInfo(otherUser.address, true, true, stakingRewardsAddress2, 0, 1000, 2, 800, 1, 0, 0);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(0, parseEther("2"));
+        await tx3.wait();
+
+        let tx4 = await poolManager.setPoolPeriodInfo(deployer.address, 0, parseEther("1"));
+        await tx4.wait();
+
+        let tx5 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, parseEther("1"));
+        await tx5.wait();
+
+        let tx6 = await poolManager.setStartTime(current - 100);
+        await tx6.wait();
+
+        let tx7 = await poolManager.setLastUpdateTime(current - 100);
+        await tx7.wait();
+
+        let tx8 = await stakingToken1.setApprovalForAll(stakingRewardsAddress, true);
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.stake(1, 3);
+        await tx9.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect((BigInt(rewardPerToken) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+        availableRewards = BigInt(availableRewards) / BigInt(2);
+
+        let earnedPool1 = await poolManager.earned(deployer.address);
+        let delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool1);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let tx10 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx10.wait();
+
+        let newEarnedPool1 = await poolManager.earned(deployer.address);
+        expect(newEarnedPool1).to.equal(0);
+
+        let earnedPool2 = await poolManager.earned(otherUser.address);
+        delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool2);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let tx11 = await stakingRewards2.claimLatestRewardsTest(otherUser.address);
+        await tx11.wait();
+
+        let newEarnedPool2 = await poolManager.earned(otherUser.address);
+        expect(newEarnedPool2).to.equal(0);
+
+        // Check reward token balances
+
+        // Rewards for second pool are transferred to xTGEN because pool has 0 weight
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        delta = BigInt(balanceStaking) - BigInt(earnedPool2);
+        expect(Number(delta)).to.be.lessThanOrEqual(Number(parseEther("4.01")));
+
+        // Account for 1 second delay
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(Number(balancePoolManager)).to.be.lessThanOrEqual(Number(parseEther("4")));
+
+        // Rewards for first pool are transferred to farm
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        delta = BigInt(balanceFarm) - BigInt(earnedPool1);
+        expect(Number(delta)).to.be.lessThanOrEqual(Number(parseEther("4")));
+        
+        let balanceFarm2 = await rewardToken.balanceOf(stakingRewardsAddress2);
+        expect(balanceFarm2).to.equal(0);
+
+        // Check PoolManager state
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let newRewards2 = await poolManager.rewards(otherUser.address);
+        expect(newRewards2).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect((BigInt(poolRewardPerTokenPaid.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        // 20 seconds delay from when contracts were deployed
+        let scaledWeight2 = BigInt(2e18) * BigInt(120) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens2 = BigInt(4 * 1e18);
+        let expectedRewardPerToken2 = expectedRewardPerToken + (expectedAvailableTokens2 * BigInt(1e18) / scaledWeight2);
+
+        let poolRewardPerTokenPaid2 = await poolManager.poolRewardPerTokenPaid(otherUser.address);
+        expect((BigInt(poolRewardPerTokenPaid2.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken2 / BigInt(1e12)).toString());
+
+        // Check first farm's state
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(balanceFarm);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        let expectedFarmRewardPerTokenStored = BigInt(balanceFarm) / BigInt(10);
+        delta = BigInt(farmRewardPerTokenStored) - BigInt(expectedFarmRewardPerTokenStored);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        let earnedFarm = await stakingRewards.earned(deployer.address);
+        delta = BigInt(earnedFarm) - BigInt(balanceFarm);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        // Check second farm's state
+
+        let totalAvailableRewards2 = await stakingRewards2.totalAvailableRewards();
+        expect(totalAvailableRewards2).to.equal(0);
+
+        let farmRewardPerTokenStored2 = await stakingRewards2.rewardPerTokenStored();
+        expect(farmRewardPerTokenStored2).to.equal(0);
+
+        let earnedFarm2 = await stakingRewards2.earned(deployer.address);
+        expect(earnedFarm2).to.equal(0);
+    });
+
+    it("rewards available; both pools eligible, both have stakers", async () => {
+        let scaledWeight = BigInt(2e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = expectedAvailableTokens * BigInt(1e18) / scaledWeight;
+        
+        let stakingRewards2 = await StakingRewardsFactory.deploy(poolManagerAddress, rewardTokenAddress, stakingTokenAddress1, scheduleCurrentAddress);
+        await stakingRewards2.deployed();
+        let stakingRewardsAddress2 = stakingRewards2.address;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setPoolInfo(otherUser.address, true, true, stakingRewardsAddress2, 0, 1000, 2, 800, 1, 0, 0);
+        await tx2.wait();
+
+        let tx3 = await poolManager.setGlobalPeriodInfo(0, parseEther("2"));
+        await tx3.wait();
+
+        let tx4 = await poolManager.setPoolPeriodInfo(deployer.address, 0, parseEther("1"));
+        await tx4.wait();
+
+        let tx5 = await poolManager.setPoolPeriodInfo(otherUser.address, 0, parseEther("1"));
+        await tx5.wait();
+
+        let tx6 = await poolManager.setStartTime(current - 100);
+        await tx6.wait();
+
+        let tx7 = await poolManager.setLastUpdateTime(current - 100);
+        await tx7.wait();
+
+        let tx8 = await stakingToken1.setApprovalForAll(stakingRewardsAddress, true);
+        await tx8.wait();
+
+        let tx9 = await stakingRewards.stake(1, 3);
+        await tx9.wait();
+
+        let tx10 = await stakingToken1.setApprovalForAll(stakingRewardsAddress2, true);
+        await tx10.wait();
+
+        let tx11 = await stakingRewards2.stake(1, 3);
+        await tx11.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect((BigInt(rewardPerToken) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+        availableRewards = BigInt(availableRewards) / BigInt(2);
+
+        let earnedPool1 = await poolManager.earned(deployer.address);
+        let delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool1);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let tx12 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx12.wait();
+
+        let newEarnedPool1 = await poolManager.earned(deployer.address);
+        expect(newEarnedPool1).to.equal(0);
+
+        let earnedPool2 = await poolManager.earned(otherUser.address);
+        delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool2);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let tx13 = await stakingRewards2.claimLatestRewardsTest(otherUser.address);
+        await tx13.wait();
+
+        let newEarnedPool2 = await poolManager.earned(otherUser.address);
+        expect(newEarnedPool2).to.equal(0);
+
+        // Check reward token balances
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(0);
+
+        // Account for 1 second delay
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(Number(balancePoolManager)).to.be.lessThanOrEqual(Number(parseEther("4")));
+
+        // Rewards for first pool are transferred to farm
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        delta = BigInt(balanceFarm) - BigInt(earnedPool1);
+        expect(Number(delta)).to.be.lessThanOrEqual(Number(parseEther("4")));
+        
+        // Rewards for second pool are transferred to farm
+        let balanceFarm2 = await rewardToken.balanceOf(stakingRewardsAddress2);
+        delta = BigInt(balanceFarm2) - BigInt(earnedPool2);
+        expect(Number(delta)).to.be.lessThanOrEqual(Number(parseEther("4.01")));
+
+        // Check PoolManager state
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let newRewards2 = await poolManager.rewards(otherUser.address);
+        expect(newRewards2).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect((BigInt(poolRewardPerTokenPaid.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        // 22 seconds delay from when contracts were deployed
+        let scaledWeight2 = BigInt(2e18) * BigInt(122) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens2 = BigInt(4 * 1e18);
+        let expectedRewardPerToken2 = expectedRewardPerToken + (expectedAvailableTokens2 * BigInt(1e18) / scaledWeight2);
+
+        let poolRewardPerTokenPaid2 = await poolManager.poolRewardPerTokenPaid(otherUser.address);
+        expect((BigInt(poolRewardPerTokenPaid2.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken2 / BigInt(1e12)).toString());
+
+        // Check first farm's state
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(balanceFarm);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        let expectedFarmRewardPerTokenStored = BigInt(balanceFarm) / BigInt(10);
+        delta = BigInt(farmRewardPerTokenStored) - BigInt(expectedFarmRewardPerTokenStored);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        let earnedFarm = await stakingRewards.earned(deployer.address);
+        delta = BigInt(earnedFarm) - BigInt(balanceFarm);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        // Check second farm's state
+
+        let totalAvailableRewards2 = await stakingRewards2.totalAvailableRewards();
+        expect(totalAvailableRewards2).to.equal(balanceFarm2);
+
+        let farmRewardPerTokenStored2 = await stakingRewards2.rewardPerTokenStored();
+        let expectedFarmRewardPerTokenStored2 = BigInt(balanceFarm2) / BigInt(10);
+        delta = BigInt(farmRewardPerTokenStored2) - BigInt(expectedFarmRewardPerTokenStored2);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        let earnedFarm2 = await stakingRewards2.earned(deployer.address);
+        delta = BigInt(earnedFarm2) - BigInt(balanceFarm2);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
     });
 
     it("pool has rewards available but farm has no stakers", async () => {
-        
+        let scaledWeight = BigInt(1e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = expectedAvailableTokens * BigInt(1e18) / scaledWeight;
+        //console.log((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, parseEther("1"));
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, parseEther("1"));
+        await tx3.wait();
+
+        let tx4 = await poolManager.setStartTime(current - 100);
+        await tx4.wait();
+
+        let tx5 = await poolManager.setLastUpdateTime(current - 100);
+        await tx5.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect((BigInt(rewardPerToken) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+        console.log(availableRewards.toString());
+
+        let earnedPool = await poolManager.earned(deployer.address);
+        let delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let tx6 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx6.wait();
+
+        let newEarnedPool = await poolManager.earned(deployer.address);
+        expect(newEarnedPool).to.equal(0);
+
+        // Check reward token balances
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        delta = BigInt(balanceStaking) - BigInt(earnedPool);
+        expect(Number(delta)).to.be.lessThanOrEqual(Number(parseEther("4")));
+
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(Number(balancePoolManager)).to.be.lessThanOrEqual(2);
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        expect(balanceFarm).to.equal(0);
+
+        // Check PoolManager state
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect((BigInt(poolRewardPerTokenPaid.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        // Check farm's state
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        expect(totalAvailableRewards).to.equal(0);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        expect(farmRewardPerTokenStored).to.equal(0);
+
+        let earnedFarm = await stakingRewards.earned(deployer.address);
+        expect(earnedFarm).to.equal(0);
     });
-  });*/
+
+    it("rewards available, pool claims rewards, more rewards added", async () => {
+        let scaledWeight = BigInt(1e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = BigInt(2) * expectedAvailableTokens * BigInt(1e18) / scaledWeight;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, parseEther("1"));
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, parseEther("1"));
+        await tx3.wait();
+
+        let tx4 = await poolManager.setStartTime(current - 100);
+        await tx4.wait();
+
+        let tx5 = await poolManager.setLastUpdateTime(current - 100);
+        await tx5.wait();
+
+        let tx6 = await stakingToken1.setApprovalForAll(stakingRewardsAddress, true);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(1, 3);
+        await tx7.wait();
+
+        let tx8 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx8.wait();
+
+        // Reset timestamps to simulate more rewards being added
+
+        let tx9 = await poolManager.setStartTime(current - 100);
+        await tx9.wait();
+
+        let tx10 = await poolManager.setLastUpdateTime(current - 100);
+        await tx10.wait();
+
+        let tx11 = await releaseEscrowCurrent.setLastWithdrawalTime(current - 100);
+        await tx11.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect((BigInt(rewardPerToken) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+
+        let earnedPool = await poolManager.earned(deployer.address);
+        let delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let tx12 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx12.wait();
+
+        let newEarnedPool = await poolManager.earned(deployer.address);
+        expect(newEarnedPool).to.equal(0);
+
+        // Check reward token balances
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(0);
+
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(Number(balancePoolManager)).to.be.lessThanOrEqual(2);
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        let expectedBalanceFarm = (BigInt(460) * BigInt(1e18)) + (BigInt(484) * BigInt(1e18));
+        delta = BigInt(expectedBalanceFarm) - BigInt(balanceFarm);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        // Check PoolManager state
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect((BigInt(poolRewardPerTokenPaid.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        // Check farm's state
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        delta = BigInt(expectedBalanceFarm) - BigInt(totalAvailableRewards);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        let expectedFarmRewardPerTokenStored = BigInt(balanceFarm) / BigInt(10);
+        delta = BigInt(farmRewardPerTokenStored) - BigInt(expectedFarmRewardPerTokenStored);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        let earnedFarm = await stakingRewards.earned(deployer.address);
+        delta = BigInt(totalAvailableRewards) - BigInt(earnedFarm);
+        expect(Number(delta)).to.be.lessThanOrEqual(20);
+    });*/
+
+    it("rewards available, one pool claims rewards and other pool doesn't, more rewards added", async () => {
+        let scaledWeight = BigInt(1e18) * BigInt(100) / BigInt(86400 * 7 * 2);
+        let expectedAvailableTokens = BigInt(400 * 1e18);
+        let expectedRewardPerToken = BigInt(2) * expectedAvailableTokens * BigInt(1e18) / scaledWeight;
+
+        let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, 0, 1000, 2, 800, 1, 0, 0);
+        await tx.wait();
+
+        let tx2 = await poolManager.setGlobalPeriodInfo(0, parseEther("1"));
+        await tx2.wait();
+
+        let tx3 = await poolManager.setPoolPeriodInfo(deployer.address, 0, parseEther("1"));
+        await tx3.wait();
+
+        let tx4 = await poolManager.setStartTime(current - 100);
+        await tx4.wait();
+
+        let tx5 = await poolManager.setLastUpdateTime(current - 100);
+        await tx5.wait();
+
+        let tx6 = await stakingToken1.setApprovalForAll(stakingRewardsAddress, true);
+        await tx6.wait();
+
+        let tx7 = await stakingRewards.stake(1, 3);
+        await tx7.wait();
+
+        let tx8 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx8.wait();
+
+        // Reset timestamps to simulate more rewards being added
+
+        let tx9 = await poolManager.setStartTime(current - 100);
+        await tx9.wait();
+
+        let tx10 = await poolManager.setLastUpdateTime(current - 100);
+        await tx10.wait();
+
+        let tx11 = await releaseEscrowCurrent.setLastWithdrawalTime(current - 100);
+        await tx11.wait();
+
+        let rewardPerToken = await poolManager.rewardPerToken();
+        expect((BigInt(rewardPerToken) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        let availableRewards = await scheduleCurrent.availableRewards(current - 100);
+
+        let earnedPool = await poolManager.earned(deployer.address);
+        let delta = BigInt(availableRewards) + BigInt(1) - BigInt(earnedPool);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let tx12 = await stakingRewards.claimLatestRewardsTest(deployer.address);
+        await tx12.wait();
+
+        let newEarnedPool = await poolManager.earned(deployer.address);
+        expect(newEarnedPool).to.equal(0);
+
+        // Check reward token balances
+
+        let balanceStaking = await rewardToken.balanceOf(scheduleCurrentAddress);
+        expect(balanceStaking).to.equal(0);
+
+        let balancePoolManager = await rewardToken.balanceOf(poolManagerAddress);
+        expect(Number(balancePoolManager)).to.be.lessThanOrEqual(2);
+
+        let balanceFarm = await rewardToken.balanceOf(stakingRewardsAddress);
+        let expectedBalanceFarm = (BigInt(460) * BigInt(1e18)) + (BigInt(484) * BigInt(1e18));
+        delta = BigInt(expectedBalanceFarm) - BigInt(balanceFarm);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        // Check PoolManager state
+
+        let newRewards = await poolManager.rewards(deployer.address);
+        expect(newRewards).to.equal(0);
+
+        let poolRewardPerTokenPaid = await poolManager.poolRewardPerTokenPaid(deployer.address);
+        expect((BigInt(poolRewardPerTokenPaid.toString()) / BigInt(1e12)).toString()).to.equal((expectedRewardPerToken / BigInt(1e12)).toString());
+
+        // Check farm's state
+
+        let totalAvailableRewards = await stakingRewards.totalAvailableRewards();
+        delta = BigInt(expectedBalanceFarm) - BigInt(totalAvailableRewards);
+        expect(Number(delta)).to.be.lessThanOrEqual(2);
+
+        let farmRewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
+        let expectedFarmRewardPerTokenStored = BigInt(balanceFarm) / BigInt(10);
+        delta = BigInt(farmRewardPerTokenStored) - BigInt(expectedFarmRewardPerTokenStored);
+        expect(Number(delta)).to.be.lessThanOrEqual(1);
+
+        let earnedFarm = await stakingRewards.earned(deployer.address);
+        delta = BigInt(totalAvailableRewards) - BigInt(earnedFarm);
+        expect(Number(delta)).to.be.lessThanOrEqual(20);
+    });
+  });
 });

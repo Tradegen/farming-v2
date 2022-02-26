@@ -178,6 +178,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
      * @return (uint256) amount of rewards claimed.
      */
     function claimLatestRewards(address poolAddress) external override releaseEscrowIsSet poolIsValid(poolAddress) onlyFarm(poolAddress) updateReward(poolAddress) returns (uint256) {
+        require(pools[poolAddress].isEligible, "PoolManager: pool is not eligible.");
+        
         uint256 reward = rewards[poolAddress];
 
         _getReward(poolAddress);
@@ -345,11 +347,11 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
 
         // Pool's average price change is above the global average price change.
         if (poolAPC[poolAddress] >= totalWeightedAPC.div(totalDuration)) {
-            return pools[poolAddress].unrealizedProfits.div(1e18).mul(TradegenMath.sqrt(poolAPC[poolAddress].sub(totalWeightedAPC.div(totalDuration))));
+            return pools[poolAddress].unrealizedProfits.mul(TradegenMath.sqrt(poolAPC[poolAddress].sub(totalWeightedAPC.div(totalDuration))));
         }
 
         // Pool's average price change is below the global average price change.
-        return pools[poolAddress].unrealizedProfits.div(1e18).mul(TradegenMath.log(poolAPC[poolAddress])).div(TradegenMath.sqrt((totalWeightedAPC.div(totalDuration)).sub(poolAPC[poolAddress])));
+        return pools[poolAddress].unrealizedProfits.mul(TradegenMath.log(poolAPC[poolAddress])).div(TradegenMath.sqrt((totalWeightedAPC.div(totalDuration)).sub(poolAPC[poolAddress])));
     }
 
     /**
@@ -394,7 +396,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
         // Pools will not earn rewards whenever there's 0 total weight.
         if ((initialRewardPerToken == rewardPerTokenStored) && releaseEscrow.hasStarted()) {
             releaseEscrow.withdraw();
-            TGEN.transfer(xTGEN, block.timestamp.sub(lastUpdateTime).mul(releaseSchedule.getCurrentRewardRate()));                               
+            TGEN.transfer(xTGEN, releaseSchedule.availableRewards(lastUpdateTime));                               
         }
 
         lastUpdateTime = block.timestamp;
