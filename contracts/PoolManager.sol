@@ -179,7 +179,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
      */
     function claimLatestRewards(address poolAddress) external override releaseEscrowIsSet poolIsValid(poolAddress) onlyFarm(poolAddress) updateReward(poolAddress) returns (uint256) {
         require(pools[poolAddress].isEligible, "PoolManager: pool is not eligible.");
-        
+
         uint256 reward = rewards[poolAddress];
 
         _getReward(poolAddress);
@@ -342,12 +342,12 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
     function _calculatePoolWeight(address poolAddress) internal view returns (uint256) {
         // Prevent division by 0.
         if (totalDuration == 0) {
-            return 0;
+            return pools[poolAddress].unrealizedProfits.mul(TradegenMath.sqrt(poolAPC[poolAddress]));
         }
 
         // Pool's average price change is above the global average price change.
         if (poolAPC[poolAddress] >= totalWeightedAPC.div(totalDuration)) {
-            return pools[poolAddress].unrealizedProfits.mul(TradegenMath.sqrt(poolAPC[poolAddress].sub(totalWeightedAPC.div(totalDuration))));
+            return pools[poolAddress].unrealizedProfits.mul(TradegenMath.sqrt(poolAPC[poolAddress].add(1).sub(totalWeightedAPC.div(totalDuration))));
         }
 
         // Pool's average price change is below the global average price change.
