@@ -12,6 +12,11 @@ describe("StakingRewards", () => {
   let stakingTokenAddress;
   let StakingTokenFactory;
 
+  // Used as placeholder for xTGEN address
+  let schedule;
+  let scheduleAddress;
+  let ScheduleFactory;
+
   let stakingRewards;
   let stakingRewardsAddress;
   let StakingRewardsFactory;
@@ -24,6 +29,7 @@ describe("StakingRewards", () => {
     StakingTokenFactory = await ethers.getContractFactory('TestTokenERC1155');
     RewardTokenFactory = await ethers.getContractFactory('TestTokenERC20');
     StakingRewardsFactory = await ethers.getContractFactory('TestStakingRewards');
+    ScheduleFactory = await ethers.getContractFactory('HalveningReleaseSchedule');
 
     rewardToken = await RewardTokenFactory.deploy("Test Reward Token", "rTEST");
     await rewardToken.deployed();
@@ -35,7 +41,11 @@ describe("StakingRewards", () => {
   });
 
   beforeEach(async () => {
-    stakingRewards = await StakingRewardsFactory.deploy(deployer.address, rewardTokenAddress, stakingTokenAddress);
+    schedule = await ScheduleFactory.deploy(0, 0);
+    await schedule.deployed();
+    scheduleAddress = schedule.address;
+
+    stakingRewards = await StakingRewardsFactory.deploy(deployer.address, rewardTokenAddress, stakingTokenAddress, scheduleAddress);
     await stakingRewards.deployed();
     stakingRewardsAddress = stakingRewards.address;
 
@@ -306,8 +316,8 @@ describe("StakingRewards", () => {
         const balanceOfClass4Other = await stakingRewards.balanceOf(otherUser.address, 4);
         expect(balanceOfClass4Other).to.equal(1);
     });
-  });
-
+  });*/
+  /*
   describe("#withdraw without rewards", () => {
     it("withdraw() partial amount of one token class with one investor when distribution has not started", async () => {
         let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
@@ -863,15 +873,15 @@ describe("StakingRewards", () => {
         expect(balanceOfOtherClass4).to.equal(0);
     });
   });*/
-
-  describe("#addReward without claiming", () => {/*
+  /*
+  describe("#addReward without claiming", () => {
     it("addReward() once with no users staked", async () => {
         let tx = await stakingRewards.addReward(100000);
         expect(tx).to.emit(stakingRewards, "RewardAdded");
         await tx.wait();
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -884,6 +894,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("addReward() multiple times with no users staked", async () => {
@@ -897,7 +910,7 @@ describe("StakingRewards", () => {
         await tx3.wait();
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(1000000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -910,6 +923,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(1000000);
     });
 
     it("addReward() once with one user staked after", async () => {
@@ -923,7 +939,7 @@ describe("StakingRewards", () => {
         await tx3.wait();
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -936,6 +952,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("addReward() multiple times with one user staked after", async () => {
@@ -955,7 +974,7 @@ describe("StakingRewards", () => {
         await tx5.wait();
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(1000000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -968,6 +987,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(1000000);
     });
 
     it("addReward() once with one user staked before", async () => {
@@ -994,6 +1016,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(99970); // 1538 * 65
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() multiple times with one user staked before", async () => {
@@ -1023,6 +1048,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(649935); // 9999 * 65
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() once with multiple users staked after", async () => {
@@ -1042,7 +1070,7 @@ describe("StakingRewards", () => {
         await tx5.wait();
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -1064,6 +1092,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("addReward() once with multiple users staked before in one token class", async () => {
@@ -1105,6 +1136,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(65000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() once with multiple users staked before in multiple token classes", async () => {
@@ -1155,6 +1189,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(140000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() with one user staked before and same user staked after; one token class", async () => {
@@ -1199,6 +1236,9 @@ describe("StakingRewards", () => {
 
         const balanceOfClass1 = await stakingRewards.balanceOf(deployer.address, 1);
         expect(balanceOfClass1).to.equal(2);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() with one user staked before and same user staked after; multiple token classes", async () => {
@@ -1255,6 +1295,9 @@ describe("StakingRewards", () => {
 
         const balanceOfClass3 = await stakingRewards.balanceOf(deployer.address, 3);
         expect(balanceOfClass3).to.equal(1);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() with one user staked before and same user staked after without adding new rewards", async () => {
@@ -1296,6 +1339,9 @@ describe("StakingRewards", () => {
 
         const balanceOfClass1 = await stakingRewards.balanceOf(deployer.address, 1);
         expect(balanceOfClass1).to.equal(2);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() with one user staked before and different user staked after without adding new rewards", async () => {
@@ -1355,6 +1401,9 @@ describe("StakingRewards", () => {
 
         const balanceOfOtherClass1 = await stakingRewards.connect(otherUser).balanceOf(otherUser.address, 1);
         expect(balanceOfOtherClass1).to.equal(1);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() with one user staked before and different user staked after with new rewards", async () => {
@@ -1411,6 +1460,9 @@ describe("StakingRewards", () => {
 
         const weightedBalanceOther = await stakingRewards.connect(otherUser).weightedBalance(otherUser.address);
         expect(weightedBalanceOther).to.equal(60);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("addReward() once with one user staked after and another reward after staking", async () => {
@@ -1427,7 +1479,7 @@ describe("StakingRewards", () => {
         await tx4.wait();
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(165000);
+        expect(totalAvailableRewards).to.equal(65000);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(1000);
@@ -1440,10 +1492,13 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(65000);
-    });*/
-  });
-  
-  describe("#getReward", () => {/*
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
+    });
+  });*/
+  /*
+  describe("#getReward", () => {
     it("getReward() with one user and nothing staked; no rewards distributed", async () => {
         const balanceBefore = await rewardToken.balanceOf(deployer.address);
 
@@ -1484,7 +1539,7 @@ describe("StakingRewards", () => {
         expect(balanceBefore).to.equal(balanceAfter);
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -1497,6 +1552,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("getReward() with one user and no rewards available", async () => {
@@ -1564,6 +1622,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("getReward() with multiple users, one is staked and other has nothing staked; no rewards available", async () => {
@@ -1720,6 +1781,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("getReward() with multiple users staked and both have rewards available; stake again after pool receives rewards and don't claim", async () => {
@@ -1782,6 +1846,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("getReward() with multiple users staked and both have rewards available; stake again after pool receives rewards and claim again", async () => {
@@ -1853,8 +1920,11 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
-    });*/
-  });
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
+    });
+  });*/
   /*
   describe("#exit", () => {
     it("exit() with one user; no rewards available", async () => {
@@ -1958,6 +2028,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("exit() with multiple users; no rewards available", async () => {
@@ -2139,10 +2212,13 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
   });*/
-
-  describe("#withdraw with rewards", () => {/*
+  /*
+  describe("#withdraw with rewards", () => {
     it("withdraw() partial amount with one investor; no rewards available", async () => {
         const balanceBefore = await rewardToken.balanceOf(deployer.address);
 
@@ -2175,7 +2251,7 @@ describe("StakingRewards", () => {
         expect(balanceOfClass1).to.equal(1);
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -2188,6 +2264,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("withdraw() full amount with one investor; no rewards available", async () => {
@@ -2222,7 +2301,7 @@ describe("StakingRewards", () => {
         expect(balanceOfClass1).to.equal(0);
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -2235,6 +2314,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("withdraw() partial amount with one investor; unclaimed rewards", async () => {
@@ -2270,6 +2352,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(130000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with one investor; unclaimed rewards", async () => {
@@ -2305,6 +2390,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(130000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() partial amount with one investor; claimed rewards", async () => {
@@ -2343,6 +2431,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with one investor; claimed rewards", async () => {
@@ -2381,6 +2472,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() partial amount with one investor and add reward after", async () => {
@@ -2419,6 +2513,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(75000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with one investor and add reward after", async () => {
@@ -2450,7 +2547,7 @@ describe("StakingRewards", () => {
         expect(BigInt(balanceAfter)).to.equal(BigInt(balanceBefore));
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -2463,6 +2560,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("withdraw() partial amount with multiple investors; no rewards available", async () => {
@@ -2503,7 +2603,7 @@ describe("StakingRewards", () => {
         expect(weightedTotalSupply).to.equal(85);
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -2525,6 +2625,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("withdraw() full amount with multiple investors; no rewards available", async () => {
@@ -2577,7 +2680,7 @@ describe("StakingRewards", () => {
         expect(weightedTotalSupply).to.equal(0);
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(100000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -2599,6 +2702,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("withdraw() full amount with multiple investors; rewards available", async () => {
@@ -2667,6 +2773,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with multiple investors and add reward after", async () => {
@@ -2713,7 +2822,7 @@ describe("StakingRewards", () => {
         expect(BigInt(balanceAfterOther)).to.equal(BigInt(balanceBeforeOther));
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(260000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -2735,6 +2844,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(260000);
     });
 
     it("withdraw() full amount with one investor and stake again; no rewards available", async () => {
@@ -2766,7 +2878,7 @@ describe("StakingRewards", () => {
         expect(weightedTotalSupply).to.equal(130);
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(130000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -2785,6 +2897,9 @@ describe("StakingRewards", () => {
 
         const balanceOfClass1 = await stakingRewards.balanceOf(deployer.address, 1);
         expect(balanceOfClass1).to.equal(2);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(130000);
     });
 
     it("withdraw() full amount with one investor and stake again; unclaimed rewards before withdrawing", async () => {
@@ -2823,6 +2938,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(130000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with one investor and stake again; claimed rewards before withdrawing", async () => {
@@ -2861,6 +2979,9 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with one investor and stake again; claim rewards after staking again", async () => {
@@ -2902,13 +3023,16 @@ describe("StakingRewards", () => {
 
         const earned = await stakingRewards.earned(deployer.address);
         expect(earned).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with multiple investors and stake again; no rewards available", async () => {
         const balanceBeforeDeployer = await rewardToken.balanceOf(deployer.address);
         const balanceBeforeOther = await rewardToken.connect(otherUser).balanceOf(otherUser.address);
 
-        let tx = await stakingRewards.addReward(130000);
+        let tx = await stakingRewards.addReward(100000);
         await tx.wait();
 
         let tx2 = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
@@ -2942,7 +3066,7 @@ describe("StakingRewards", () => {
         expect(weightedTotalSupply).to.equal(260);
 
         const totalAvailableRewards = await stakingRewards.totalAvailableRewards();
-        expect(totalAvailableRewards).to.equal(130000);
+        expect(totalAvailableRewards).to.equal(0);
 
         const rewardPerTokenStored = await stakingRewards.rewardPerTokenStored();
         expect(rewardPerTokenStored).to.equal(0);
@@ -2976,6 +3100,9 @@ describe("StakingRewards", () => {
 
         const balanceOfOtherClass1 = await stakingRewards.connect(otherUser).balanceOf(otherUser.address, 1);
         expect(balanceOfOtherClass1).to.equal(2);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(100000);
     });
 
     it("withdraw() full amount with multiple investors and stake again; unclaimed rewards before withdrawing", async () => {
@@ -3032,6 +3159,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(130000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with multiple investors and stake again; claimed rewards before withdrawing", async () => {
@@ -3088,6 +3218,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(130000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with multiple investors and stake again; claim rewards after staking again", async () => {
@@ -3150,6 +3283,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(0);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with multiple investors, stake again, claim rewards, and add rewards again", async () => {
@@ -3215,6 +3351,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(130000);
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
     });
 
     it("withdraw() full amount with multiple investors, stake again, leave rewards unclaimed, and add rewards again", async () => {
@@ -3277,6 +3416,9 @@ describe("StakingRewards", () => {
 
         const earnedOther = await stakingRewards.connect(otherUser).earned(otherUser.address);
         expect(earnedOther).to.equal(130000);
-    });*/
-  });
+
+        const balance = await rewardToken.balanceOf(scheduleAddress);
+        expect(balance).to.equal(0);
+    });
+  });*/
 });
