@@ -5,6 +5,7 @@ get_account.js
 node_modules
 build/artifacts
 build/cache
+build/contracts
 .env
 package-lock.json
 yarn.lock
