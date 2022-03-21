@@ -394,13 +394,12 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
         uint256 initialRewardPerToken = rewardPerTokenStored;
         rewardPerTokenStored = rewardPerToken();
 
-        // Check if the total scaled weight is 0
+         // Check if the total scaled weight is 0
         // If so, transfer pending rewards to xTGEN to prevent tokens from being lost.
         // Pools will not earn rewards whenever there's 0 total weight.
         if ((initialRewardPerToken == rewardPerTokenStored) && releaseEscrow.hasStarted()) {
-            uint256 initialBalanceTGEN = TGEN.balanceOf(address(this));
             releaseEscrow.withdraw();
-            TGEN.transfer(xTGEN, TGEN.balanceOf(address(this)).sub(initialBalanceTGEN));                               
+            TGEN.transfer(xTGEN, releaseSchedule.availableRewards(lastUpdateTime));                               
         }
 
         lastUpdateTime = block.timestamp;
