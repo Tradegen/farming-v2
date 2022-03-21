@@ -21,7 +21,7 @@ import "./interfaces/IStakingRewards.sol";
 //Libraries
 import "./libraries/TradegenMath.sol";
 
-contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ownable {
+contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -60,6 +60,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
     address public xTGEN;
     IReleaseEscrow public releaseEscrow;
     IReleaseSchedule public releaseSchedule;
+    IStakingRewardsFactory public immutable stakingRewardsFactory;
     address public immutable poolFactory;
 
     mapping(address => PoolInfo) public pools; // Keyed by pool address
@@ -79,10 +80,10 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory, address _TGEN, address _xTGEN) Ownable()
-        StakingRewardsFactory(address(this), _rewardsToken, _xTGEN) {
+    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory, address _stakingRewardsFactory, address _TGEN, address _xTGEN) Ownable() {
             rewardsToken = IERC20(_rewardsToken);
             releaseSchedule = IReleaseSchedule(_releaseSchedule);
+            stakingRewardsFactory = IStakingRewardsFactory(_stakingRewardsFactory);
             poolFactory = _poolFactory;
             TGEN = IERC20(_TGEN);
             xTGEN = _xTGEN;
@@ -177,7 +178,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
      * @param poolAddress address of the pool.
      * @return (uint256) amount of rewards claimed.
      */
-    function claimLatestRewards(address poolAddress) external override releaseEscrowIsSet poolIsValid(poolAddress) onlyFarm(poolAddress) updateReward(poolAddress) returns (uint256) {
+    function claimLatestRewards(address poolAddress) external override releaseEscrowIsSet poolIsValid(poolAddress) updateReward(poolAddress) returns (uint256) {
+        require(msg.sender == pools[poolAddress].farmAddress, "PoolManager: only the StakingRewards contract can call this function.");
         require(pools[poolAddress].isEligible, "PoolManager: pool is not eligible.");
 
         uint256 reward = rewards[poolAddress];
@@ -245,12 +247,13 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
      * @param poolAddress address of the pool.
      * @param seedPrice initial price of the pool.
      */
-    function registerPool(address poolAddress, uint256 seedPrice) external override onlyPoolFactory {
+    function registerPool(address poolAddress, uint256 seedPrice) external override {
+        require(msg.sender == poolFactory, "PoolManager: only the PoolFactory contract can call this function.");
         require(poolAddress != address(0), "PoolManager: invalid pool address.");
         require(!pools[poolAddress].isValid, "PoolManager: pool already exists.");
         require(seedPrice > 0, "PoolManager: seed price must be greater than 0.");
 
-        address farmAddress = _createFarm(msg.sender);
+        address farmAddress = stakingRewardsFactory.createFarm(msg.sender);
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
 
         pools[poolAddress] = PoolInfo({
@@ -395,8 +398,9 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
         // If so, transfer pending rewards to xTGEN to prevent tokens from being lost.
         // Pools will not earn rewards whenever there's 0 total weight.
         if ((initialRewardPerToken == rewardPerTokenStored) && releaseEscrow.hasStarted()) {
+            uint256 initialBalanceTGEN = TGEN.balanceOf(address(this));
             releaseEscrow.withdraw();
-            TGEN.transfer(xTGEN, releaseSchedule.availableRewards(lastUpdateTime));                               
+            TGEN.transfer(xTGEN, TGEN.balanceOf(address(this)).sub(initialBalanceTGEN));                               
         }
 
         lastUpdateTime = block.timestamp;
@@ -406,18 +410,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, StakingRewardsFactory, Ow
         _;
     }
 
-    modifier onlyPoolFactory() {
-        require(msg.sender == poolFactory, "PoolManager: only the PoolFactory contract can call this function.");
-        _;
-    }
-
     modifier poolIsValid(address poolAddress) {
         require(pools[poolAddress].isValid, "PoolManager: only registered pools can call this function.");
-        _;
-    }
-
-    modifier onlyFarm(address poolAddress) {
-        require(msg.sender == pools[poolAddress].farmAddress, "PoolManager: only the StakingRewards contract can call this function.");
         _;
     }
 
