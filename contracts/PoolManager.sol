@@ -291,8 +291,9 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
      * @return bool whether the pool was marked as eligible.
      */
     function markPoolAsEligible(uint256 _totalValueLocked, uint256 _numberOfInvestors) external override poolIsValid(msg.sender) returns (bool) {
-        require(_totalValueLocked >= 0, "PoolManager: total value locked must be positive.");
-        require(_numberOfInvestors >= 0, "PoolManager: numberOfInvestors must be positive.");
+        require(_totalValueLocked >= 0, "PoolManager: Total value locked must be positive.");
+        require(_numberOfInvestors >= 0, "PoolManager: NumberOfInvestors must be positive.");
+        require(!pools[msg.sender].isEligible, "PoolManager: Already marked as eligible.");
 
         if (block.timestamp.sub(pools[msg.sender].createdOn) < MINIMUM_POOL_DURATION) {
             return false;
