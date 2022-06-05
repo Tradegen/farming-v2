@@ -2,10 +2,12 @@
 
 pragma solidity ^0.8.3;
 
+// OpenZeppelin.
 import "./openzeppelin-solidity/contracts/ERC20/SafeERC20.sol";
 import "./openzeppelin-solidity/contracts/SafeMath.sol";
 import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
 
+// Interfaces.
 import "./interfaces/IReleaseSchedule.sol";
 import "./interfaces/IReleaseEscrow.sol";
 
@@ -44,15 +46,15 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
     /**
      * @notice Release Schedule must have the same start time. 
      */
-    constructor(address beneficiary_, address rewardToken_, address schedule_, uint256 startTime_) {
-        require(startTime_ > block.timestamp, "ReleaseEscrow: start time must be in the future");
+    constructor(address _beneficiary, address _rewardToken, address _schedule, uint256 _startTime) {
+        require(_startTime > block.timestamp, "ReleaseEscrow: Start time must be in the future.");
 
-        beneficiary = beneficiary_;
-        rewardToken = IERC20(rewardToken_);
-        schedule = IReleaseSchedule(schedule_);
-        startTime = startTime_;
-        lastWithdrawalTime = IReleaseSchedule(schedule_).getStartOfCurrentCycle();
-        lifetimeRewards = IReleaseSchedule(schedule_).getTokensForCycle(1).mul(2);
+        beneficiary = _beneficiary;
+        rewardToken = IERC20(_rewardToken);
+        schedule = IReleaseSchedule(_schedule);
+        startTime = _startTime;
+        lastWithdrawalTime = IReleaseSchedule(_schedule).getStartOfCurrentCycle();
+        lifetimeRewards = IReleaseSchedule(_schedule).getTokensForCycle(1).mul(2);
     }
 
     /* ========== VIEWS ========== */
@@ -105,12 +107,12 @@ contract ReleaseEscrow is ReentrancyGuard, IReleaseEscrow {
     /* ========== MODIFIERS ========== */
 
     modifier started {
-        require(hasStarted(), "ReleaseEscrow: release has not started yet");
+        require(hasStarted(), "ReleaseEscrow: Release has not started yet.");
         _;
     }
 
     modifier onlyBeneficiary {
-        require(msg.sender == beneficiary, "ReleaseEscrow: only the beneficiary can call this function");
+        require(msg.sender == beneficiary, "ReleaseEscrow: Only the beneficiary can call this function.");
         _;
     }
 }

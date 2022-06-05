@@ -145,7 +145,7 @@ describe("PoolManager", () => {
     let tx4 = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
     await tx4.wait();
   });
-/*
+
   describe("#registerPool", () => {
     it("only pool factory", async () => {
         let tx = poolManager.connect(otherUser).registerPool(stakingTokenAddress1, 1000);
@@ -1978,7 +1978,7 @@ describe("PoolManager", () => {
         delta = BigInt(totalAvailableRewards) - BigInt(earnedFarm);
         expect(Number(delta)).to.be.lessThanOrEqual(20);
     });
-  });*/
+  });
   
   describe("#updateWeight", () => {
     let current;
@@ -2020,7 +2020,7 @@ describe("PoolManager", () => {
         let tx3 = await poolManager.setReleaseEscrow(releaseEscrowCurrentAddress);
         await tx3.wait();
     });
-    /*
+    
     it("update weights for first time in period 0; one pool", async () => {
         let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, parseEther("10"), parseEther("1.2"), 0, parseEther("1"), 0, current - 100, current - 100);
         await tx.wait();
@@ -2436,7 +2436,7 @@ describe("PoolManager", () => {
         expect(poolInfo.latestRecordedPeriodIndex).to.equal(3);
         expect(poolInfo.lastUpdated).to.equal(Number(current) + 26);
     });
-    */
+    
     it("multiple pools updating weight multiple times in period 0", async () => {
         let tx = await poolManager.setPoolInfo(deployer.address, true, true, stakingRewardsAddress, parseEther("10"), parseEther("1"), 0, parseEther("1"), 0, current - 100, current - 100);
         await tx.wait();

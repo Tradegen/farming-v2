@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-/*
+
 describe("ReleaseEscrow", () => {
   let deployer;
   let otherUser;
@@ -229,4 +229,4 @@ describe("ReleaseEscrow", () => {
       expect(unclaimedRewards).to.equal(0);
     });
   });
-});*/
+});

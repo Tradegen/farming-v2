@@ -3,22 +3,22 @@
 
 pragma solidity ^0.8.3;
 
-// OpenZeppelin
+// OpenZeppelin.
 import "./openzeppelin-solidity/contracts/Ownable.sol";
 import "./openzeppelin-solidity/contracts/SafeMath.sol";
 import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
 import "./openzeppelin-solidity/contracts/ERC20/SafeERC20.sol";
 
-// Inheritance
+// Inheritance.
 import "./interfaces/IPoolManager.sol";
-import "./StakingRewardsFactory.sol";
+import "./interfaces/IStakingRewardsFactory.sol";
 
-// Interfaces
+// Interfaces.
 import "./interfaces/IReleaseEscrow.sol";
 import "./interfaces/IReleaseSchedule.sol";
 import "./interfaces/IStakingRewards.sol";
 
-//Libraries
+// Libraries.
 import "./libraries/TradegenMath.sol";
 
 contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
@@ -48,28 +48,39 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
 
     /* ========== STATE VARIABLES ========== */
 
-    // Configuration 
+    // Configuration.
     uint32 public constant PERIOD_DURATION = 14 days;
     uint256 public constant MINIMUM_POOL_DURATION = 30 days;
     uint256 public constant MINIMUM_NUMBER_OF_INVESTORS = 10;
     uint256 public constant MINIMUM_TOTAL_VALUE_LOCKED = 10 ** 21; // $1,000
 
-    // Contracts
+    // Contracts.
     IERC20 public rewardsToken;
     IERC20 public TGEN;
     address public xTGEN;
     IReleaseEscrow public releaseEscrow;
     IReleaseSchedule public releaseSchedule;
     IStakingRewardsFactory public immutable stakingRewardsFactory;
-    address public immutable poolFactory;
+    address public immutable registry;
 
-    mapping(address => PoolInfo) public pools; // Keyed by pool address
-    mapping(uint256 => GlobalPeriodInfo) public globalPeriods; // Keyed by period index
-    mapping(address => mapping(uint256 => PoolPeriodInfo)) public poolPeriods; // Keyed by pool address and period index
+    // (pool address => pool info).
+    mapping(address => PoolInfo) public pools;
 
-    mapping(address => uint256) public poolAPC; // The average price change of each pool
-    uint256 public totalWeightedAPC; // Sum of (pool APC * pool duration)
-    uint256 public totalDuration; // Sum of pool duration; used for calculating average APC
+    // (period index => global period info).
+    mapping(uint256 => GlobalPeriodInfo) public globalPeriods;
+
+    // (pool address => period index => pool period info).
+    mapping(address => mapping(uint256 => PoolPeriodInfo)) public poolPeriods;
+
+    // (pool address => pool's average price change).
+    mapping(address => uint256) public poolAPC;
+
+    // Sum of (pool APC * pool duration).
+    uint256 public totalWeightedAPC; 
+
+    // Sum of pool durations.
+    // Used for calculating average APC
+    uint256 public totalDuration; 
 
     uint256 public lastUpdateTime;
     uint256 public startTime;
@@ -80,38 +91,38 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _rewardsToken, address _releaseSchedule, address _poolFactory, address _stakingRewardsFactory, address _TGEN, address _xTGEN) Ownable() {
-            rewardsToken = IERC20(_rewardsToken);
-            releaseSchedule = IReleaseSchedule(_releaseSchedule);
-            stakingRewardsFactory = IStakingRewardsFactory(_stakingRewardsFactory);
-            poolFactory = _poolFactory;
-            TGEN = IERC20(_TGEN);
-            xTGEN = _xTGEN;
+    constructor(address _rewardsToken, address _releaseSchedule, address _registry, address _stakingRewardsFactory, address _TGEN, address _xTGEN) Ownable() {
+        rewardsToken = IERC20(_rewardsToken);
+        releaseSchedule = IReleaseSchedule(_releaseSchedule);
+        stakingRewardsFactory = IStakingRewardsFactory(_stakingRewardsFactory);
+        registry = _registry;
+        TGEN = IERC20(_TGEN);
+        xTGEN = _xTGEN;
 
-            startTime = block.timestamp;
-            lastUpdateTime = block.timestamp;
+        startTime = block.timestamp;
+        lastUpdateTime = block.timestamp;
     }
 
     /* ========== VIEWS ========== */
 
     /**
-     * @dev Returns the pool info for the given address.
-     * @param poolAddress address of the pool.
-     * @return (bool, bool, address, uint256) whether the pool is valid, whether the pool is eligible for rewards, address of the pool's farm, and the pool's unrealized profits.
+     * @notice Returns the pool info for the given address.
+     * @param _poolAddress Address of the pool.
+     * @return (bool, bool, address, uint256) Whether the pool is valid, whether the pool is eligible for rewards, address of the pool's farm, and the pool's unrealized profits.
      */
-    function getPoolInfo(address poolAddress) external view override returns (bool, bool, address, uint256) {
-        require(poolAddress != address(0), "PoolManager: invalid pool address.");
+    function getPoolInfo(address _poolAddress) external view override returns (bool, bool, address, uint256) {
+        require(_poolAddress != address(0), "PoolManager: Invalid pool address.");
 
-        PoolInfo memory data = pools[poolAddress];
+        PoolInfo memory data = pools[_poolAddress];
 
         return (data.isValid, data.isEligible, data.farmAddress, data.unrealizedProfits);
     }
 
     /**
-     * @dev Calculates the amount of rewards per "token" a pool has.
-     * @notice Scaled by a factor of 1e18.
-     * @notice For the PoolManager contract, one "token" represents one unit of "weight" (derived from a pool's unrealized profits and token price).
-     * @return (uint256) reward per "token".
+     * @notice Calculates the amount of rewards per "token" a pool has.
+     * @dev Scaled by a factor of 1e18.
+     * @dev For the PoolManager contract, one "token" represents one unit of "weight" (derived from a pool's unrealized profits and token price).
+     * @return uint256 Reward per "token".
      */
     function rewardPerToken() public view override returns (uint256) {
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
@@ -121,7 +132,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
                                     getStartOfPeriod(currentPeriodIndex),
                                     PERIOD_DURATION);
 
-        // Prevent division by 0 from TradegenMath.scaleByTime() returning 0
+        // Prevent division by 0 from TradegenMath.scaleByTime() returning 0.
         if (scaledWeight == 0) {
             return rewardPerTokenStored;
         }
@@ -130,74 +141,74 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
     }
 
     /**
-     * @dev Calculates the amount of unclaimed rewards the pool has available.
-     * @param poolAddress address of the pool.
-     * @return (uint256) amount of available unclaimed rewards.
+     * @notice Calculates the amount of unclaimed rewards the pool has available.
+     * @param _poolAddress Address of the pool.
+     * @return uint256 Amount of available unclaimed rewards.
      */
-    function earned(address poolAddress) public view override returns (uint256) {
-        require(poolAddress != address(0), "PoolManager: invalid pool address.");
+    function earned(address _poolAddress) public view override returns (uint256) {
+        require(_poolAddress != address(0), "PoolManager: Invalid pool address.");
 
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
 
-        return TradegenMath.scaleByTime(poolPeriods[poolAddress][currentPeriodIndex].weight,
-                                        currentPeriodIndex > 0 ? poolPeriods[poolAddress][currentPeriodIndex.sub(1)].weight : 0,
+        return TradegenMath.scaleByTime(poolPeriods[_poolAddress][currentPeriodIndex].weight,
+                                        currentPeriodIndex > 0 ? poolPeriods[_poolAddress][currentPeriodIndex.sub(1)].weight : 0,
                                         block.timestamp,
                                         getStartOfPeriod(currentPeriodIndex),
                                         PERIOD_DURATION)
-                                    .mul(rewardPerToken().sub(poolRewardPerTokenPaid[poolAddress])).div(1e18).add(rewards[poolAddress]);
+                                    .mul(rewardPerToken().sub(poolRewardPerTokenPaid[_poolAddress])).div(1e18).add(rewards[_poolAddress]);
     }
 
     /**
-     * @dev Calculates the period index corresponding to the given timestamp.
-     * @param timestamp timestamp to calculate the period for.
-     * @return (uint256) index of the period to which the timestamp belongs to.
+     * @notice Calculates the period index corresponding to the given timestamp.
+     * @param _timestamp Timestamp to calculate the period for.
+     * @return uint256 Index of the period to which the timestamp belongs to.
      */
-    function getPeriodIndex(uint256 timestamp) public view override returns (uint256) {
-        require(timestamp >= startTime, "PoolManager: timestamp must be greater than start time.");
+    function getPeriodIndex(uint256 _timestamp) public view override returns (uint256) {
+        require(_timestamp >= startTime, "PoolManager: Timestamp must be greater than start time.");
 
-        return (timestamp.sub(startTime)).div(PERIOD_DURATION);
+        return (_timestamp.sub(startTime)).div(PERIOD_DURATION);
     }
 
     /**
-     * @dev Calculates the starting timestamp of the given period.
-     * @notice This function is used for time-scaling a pool's weight.
-     * @param periodIndex index of the period.
-     * @return (uint256) timestamp at which the period started.
+     * @notice Calculates the starting timestamp of the given period.
+     * @dev This function is used for time-scaling a pool's weight.
+     * @param _periodIndex Index of the period.
+     * @return uint256 Timestamp at which the period started.
      */
-    function getStartOfPeriod(uint256 periodIndex) public view override returns (uint256) {
-        require(periodIndex >= 0, "PoolManager: period index must be positive.");
+    function getStartOfPeriod(uint256 _periodIndex) public view override returns (uint256) {
+        require(_periodIndex >= 0, "PoolManager: Period index must be positive.");
 
-        return startTime.add(periodIndex.mul(PERIOD_DURATION));
+        return startTime.add(_periodIndex.mul(PERIOD_DURATION));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     /**
-     * @dev Claims the pool's available rewards.
-     * @notice This function is meant to be called by the pool's farm whenever a user claims their farming rewards.
-     * @param poolAddress address of the pool.
-     * @return (uint256) amount of rewards claimed.
+     * @notice Claims the pool's available rewards.
+     * @dev This function is meant to be called by the pool's farm whenever a user claims their farming rewards.
+     * @param _poolAddress Address of the pool.
+     * @return uint256 Amount of rewards claimed.
      */
-    function claimLatestRewards(address poolAddress) external override releaseEscrowIsSet poolIsValid(poolAddress) updateReward(poolAddress) returns (uint256) {
-        require(msg.sender == pools[poolAddress].farmAddress, "PoolManager: only the StakingRewards contract can call this function.");
-        require(pools[poolAddress].isEligible, "PoolManager: pool is not eligible.");
+    function claimLatestRewards(address _poolAddress) external override releaseEscrowIsSet poolIsValid(_poolAddress) updateReward(_poolAddress) returns (uint256) {
+        require(msg.sender == pools[_poolAddress].farmAddress, "PoolManager: Only the StakingRewards contract can call this function.");
+        require(pools[_poolAddress].isEligible, "PoolManager: Pool is not eligible.");
 
-        uint256 reward = rewards[poolAddress];
+        uint256 reward = rewards[_poolAddress];
 
-        _getReward(poolAddress);
+        _getReward(_poolAddress);
 
         return reward;
     }
 
     /**
-     * @dev Updates the pool's weight based on the pool's unrealized profits and change in token price from the last period.
-     * @notice This function is meant to be called by a pool contract at the end of deposit(), withdraw(), and executeTransaction() functions.
-     * @param newUnrealizedProfits the new unrealized profits for the pool, after calling the parent function.
-     * @param poolTokenPrice the current price of the pool's token.
+     * @notice Updates the pool's weight based on the pool's unrealized profits and change in token price from the last period.
+     * @dev This function is meant to be called by a pool contract at the end of deposit(), withdraw(), and executeTransaction() functions.
+     * @param _newUnrealizedProfits The new unrealized profits for the pool, after calling the parent function.
+     * @param _poolTokenPrice The current price of the pool's token.
      */
-    function updateWeight(uint256 newUnrealizedProfits, uint256 poolTokenPrice) external override nonReentrant releaseEscrowIsSet poolIsValid(msg.sender) updateReward(msg.sender) {
-        require(newUnrealizedProfits >= 0, "PoolManager: unrealized profits cannot be negative.");
-        require(poolTokenPrice > 0, "PoolManager: pool token price must be greater than 0.");
+    function updateWeight(uint256 _newUnrealizedProfits, uint256 _poolTokenPrice) external override nonReentrant releaseEscrowIsSet poolIsValid(msg.sender) updateReward(msg.sender) {
+        require(_newUnrealizedProfits >= 0, "PoolManager: Unrealized profits cannot be negative.");
+        require(_poolTokenPrice > 0, "PoolManager: Pool token price must be greater than 0.");
 
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
         uint256 currentPoolWeight = poolPeriods[msg.sender][currentPeriodIndex].weight;
@@ -208,8 +219,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
             pools[msg.sender].previousRecordedPeriodIndex = pools[msg.sender].latestRecordedPeriodIndex; 
         }
         
-        pools[msg.sender].unrealizedProfits = newUnrealizedProfits;
-        pools[msg.sender].latestRecordedPrice = poolTokenPrice;
+        pools[msg.sender].unrealizedProfits = _newUnrealizedProfits;
+        pools[msg.sender].latestRecordedPrice = _poolTokenPrice;
         pools[msg.sender].latestRecordedPeriodIndex = currentPeriodIndex;
 
         if (!pools[msg.sender].isEligible) {
@@ -242,56 +253,56 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
     }
 
     /**
-     * @dev Registers a pool in the farming system.
-     * @notice This function is meant to be called by the PoolFactory contract when creating a pool.
-     * @param poolAddress address of the pool.
-     * @param seedPrice initial price of the pool.
+     * @notice Registers a pool in the farming system.
+     * @dev This function is meant to be called by the Registry contract when creating a pool.
+     * @param _poolAddress address of the pool.
+     * @param _seedPrice initial price of the pool.
      */
-    function registerPool(address poolAddress, uint256 seedPrice) external override {
-        require(msg.sender == poolFactory, "PoolManager: only the PoolFactory contract can call this function.");
-        require(poolAddress != address(0), "PoolManager: invalid pool address.");
-        require(!pools[poolAddress].isValid, "PoolManager: pool already exists.");
-        require(seedPrice > 0, "PoolManager: seed price must be greater than 0.");
+    function registerPool(address _poolAddress, uint256 _seedPrice) external override {
+        require(msg.sender == registry, "PoolManager: Only the Registry contract can call this function.");
+        require(_poolAddress != address(0), "PoolManager: Invalid pool address.");
+        require(!pools[_poolAddress].isValid, "PoolManager: Pool already exists.");
+        require(_seedPrice > 0, "PoolManager: Seed price must be greater than 0.");
 
         address farmAddress = stakingRewardsFactory.createFarm(msg.sender);
         uint256 currentPeriodIndex = getPeriodIndex(block.timestamp);
 
-        pools[poolAddress] = PoolInfo({
+        pools[_poolAddress] = PoolInfo({
             isValid: true,
             isEligible: false,
             farmAddress: farmAddress,
             unrealizedProfits: 0,
-            latestRecordedPrice: seedPrice,
+            latestRecordedPrice: _seedPrice,
             latestRecordedPeriodIndex: currentPeriodIndex,
-            previousRecordedPrice: seedPrice,
+            previousRecordedPrice: _seedPrice,
             previousRecordedPeriodIndex: currentPeriodIndex,
             lastUpdated: block.timestamp,
             createdOn: block.timestamp
         });
 
-        emit RegisteredPool(poolAddress, farmAddress);
+        emit RegisteredPool(_poolAddress, farmAddress);
     }
 
     /**
-     * @dev Marks a pool as eligible for farming rewards, if it meets the minimum criteria.
-     * @notice This function is meant to be called by a pool contract, from the pool's owner.
-     * @param totalValueLocked current value of the pool in USD.
-     * @param numberOfInvestors number of unique investors in the pool.
-     * @return (bool) whether the pool was marked as eligible.
+     * @notice Marks a pool as eligible for farming rewards, if it meets the minimum criteria.
+     * @dev This function is meant to be called by a pool contract, from the pool's owner.
+     * @param _totalValueLocked Current value of the pool in USD.
+     * @param _numberOfInvestors Number of unique investors in the pool.
+     * @return bool whether the pool was marked as eligible.
      */
-    function markPoolAsEligible(uint256 totalValueLocked, uint256 numberOfInvestors) external override poolIsValid(msg.sender) returns (bool) {
-        require(totalValueLocked >= 0, "PoolManager: total value locked must be positive.");
-        require(numberOfInvestors >= 0, "PoolManager: numberOfInvestors must be positive.");
+    function markPoolAsEligible(uint256 _totalValueLocked, uint256 _numberOfInvestors) external override poolIsValid(msg.sender) returns (bool) {
+        require(_totalValueLocked >= 0, "PoolManager: total value locked must be positive.");
+        require(_numberOfInvestors >= 0, "PoolManager: numberOfInvestors must be positive.");
 
         if (block.timestamp.sub(pools[msg.sender].createdOn) < MINIMUM_POOL_DURATION) {
             return false;
         }
 
-        if (totalValueLocked < MINIMUM_TOTAL_VALUE_LOCKED) {
+        if (_totalValueLocked < MINIMUM_TOTAL_VALUE_LOCKED) {
             return false;
         }
 
-        if (numberOfInvestors < MINIMUM_NUMBER_OF_INVESTORS) {
+        if (_numberOfInvestors < MINIMUM_NUMBER_OF_INVESTORS) {
             return false;
         }
 
@@ -303,11 +314,11 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
     }
 
     /**
-     * @dev Sets the address of the ReleaseEscrow contract.
-     * @notice This function can only be called once, and must be called before users can interact with PoolManager.
+     * @notice Sets the address of the ReleaseEscrow contract.
+     * @dev This function can only be called once, and must be called before users can interact with PoolManager.
      */
     function setReleaseEscrow(address _releaseEscrow) external onlyOwner releaseEscrowIsNotSet {
-        require(_releaseEscrow != address(0), "PoolManager: invalid address.");
+        require(_releaseEscrow != address(0), "PoolManager: Invalid address.");
 
         releaseEscrow = IReleaseEscrow(_releaseEscrow);
 
@@ -317,54 +328,54 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
     /* ========== INTERNAL FUNCTIONS ========== */
 
     /**
-     * @dev Withdraws available tokens from the ReleaseEscrow contract and transfers the pool's share of those rewards to the pool's farm.
-     * @param poolAddress address of the pool.
+     * @notice Withdraws available tokens from the ReleaseEscrow contract and transfers the pool's share of those rewards to the pool's farm.
+     * @param _poolAddress Address of the pool.
      */
-    function _getReward(address poolAddress) internal {
+    function _getReward(address _poolAddress) internal {
         releaseEscrow.withdraw();
 
-        uint256 reward = rewards[poolAddress];
+        uint256 reward = rewards[_poolAddress];
         if (reward > 0) {
-            rewards[poolAddress] = 0;
-            rewardsToken.transfer(pools[poolAddress].farmAddress, reward);
-            IStakingRewards(pools[poolAddress].farmAddress).addReward(reward);
+            rewards[_poolAddress] = 0;
+            rewardsToken.transfer(pools[_poolAddress].farmAddress, reward);
+            IStakingRewards(pools[_poolAddress].farmAddress).addReward(reward);
 
-            emit RewardPaid(poolAddress, reward);
+            emit RewardPaid(_poolAddress, reward);
         }
     }
 
     /**
-     * @dev Calculates the pool's weight.
-     * @notice The weight is calculated by [unrealizedProfits / 1e18 * x].
-     * @notice If pool's APC >= average APC, x = sqrt(pool APC - average APC).
-     * @notice Else, x = log2(pool APC) / sqrt(average APC - pool APC).
-     * @notice Average APC = totalWeightedAPC / totalDuration.
-     * @param poolAddress address of the pool.
-     * @return (uint256) weight of the pool.
+     * @notice Calculates the pool's weight.
+     * @dev The weight is calculated by [unrealizedProfits / 1e18 * x].
+     * @dev If pool's APC >= average APC, x = sqrt(pool APC - average APC).
+     * @dev Else, x = log2(pool APC) / sqrt(average APC - pool APC).
+     * @dev Average APC = totalWeightedAPC / totalDuration.
+     * @param _poolAddress Address of the pool.
+     * @return uint256 Weight of the pool.
      */
-    function _calculatePoolWeight(address poolAddress) internal view returns (uint256) {
+    function _calculatePoolWeight(address _poolAddress) internal view returns (uint256) {
         // Prevent division by 0.
         if (totalDuration == 0) {
-            return pools[poolAddress].unrealizedProfits.mul(TradegenMath.sqrt(poolAPC[poolAddress]));
+            return pools[_poolAddress].unrealizedProfits.mul(TradegenMath.sqrt(poolAPC[_poolAddress]));
         }
 
         // Pool's average price change is above the global average price change.
-        if (poolAPC[poolAddress] >= totalWeightedAPC.div(totalDuration)) {
-            return pools[poolAddress].unrealizedProfits.mul(TradegenMath.sqrt(poolAPC[poolAddress].add(1).sub(totalWeightedAPC.div(totalDuration))));
+        if (poolAPC[_poolAddress] >= totalWeightedAPC.div(totalDuration)) {
+            return pools[_poolAddress].unrealizedProfits.mul(TradegenMath.sqrt(poolAPC[_poolAddress].add(1).sub(totalWeightedAPC.div(totalDuration))));
         }
 
         // Pool's average price change is below the global average price change.
-        return pools[poolAddress].unrealizedProfits.mul(TradegenMath.log(poolAPC[poolAddress])).div(TradegenMath.sqrt((totalWeightedAPC.div(totalDuration)).sub(poolAPC[poolAddress])));
+        return pools[_poolAddress].unrealizedProfits.mul(TradegenMath.log(poolAPC[_poolAddress])).div(TradegenMath.sqrt((totalWeightedAPC.div(totalDuration)).sub(poolAPC[_poolAddress])));
     }
 
     /**
-     * @dev Calculates the pool's average price change over the last 2 periods.
-     * @notice Average price change is the difference between latest price and previous price, divided by the number of periods between the two prices.
-     * @param poolAddress address of the pool.
-     * @return (uint256) average price change.
+     * @notice Calculates the pool's average price change over the last 2 periods.
+     * @dev Average price change is the difference between latest price and previous price, divided by the number of periods between the two prices.
+     * @param _poolAddress Address of the pool.
+     * @return uint256 Average price change.
      */
-    function _calculateAveragePriceChange(address poolAddress) internal view returns (uint256) {
-        PoolInfo memory data = pools[poolAddress];
+    function _calculateAveragePriceChange(address _poolAddress) internal view returns (uint256) {
+        PoolInfo memory data = pools[_poolAddress];
 
         // Return early if the pool's token has declined in price.
         if (data.latestRecordedPrice <= data.previousRecordedPrice) {
@@ -390,11 +401,11 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
 
     /* ========== MODIFIERS ========== */
 
-    modifier updateReward(address poolAddress) {
+    modifier updateReward(address _poolAddress) {
         uint256 initialRewardPerToken = rewardPerTokenStored;
         rewardPerTokenStored = rewardPerToken();
 
-         // Check if the total scaled weight is 0
+        // Check if the total scaled weight is 0
         // If so, transfer pending rewards to xTGEN to prevent tokens from being lost.
         // Pools will not earn rewards whenever there's 0 total weight.
         if ((initialRewardPerToken == rewardPerTokenStored) && releaseEscrow.hasStarted()) {
@@ -403,14 +414,14 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
         }
 
         lastUpdateTime = block.timestamp;
-        rewards[poolAddress] = earned(poolAddress);
-        poolRewardPerTokenPaid[poolAddress] = rewardPerTokenStored;
+        rewards[_poolAddress] = earned(_poolAddress);
+        poolRewardPerTokenPaid[_poolAddress] = rewardPerTokenStored;
 
         _;
     }
 
-    modifier poolIsValid(address poolAddress) {
-        require(pools[poolAddress].isValid, "PoolManager: only registered pools can call this function.");
+    modifier poolIsValid(address _poolAddress) {
+        require(pools[_poolAddress].isValid, "PoolManager: Only registered pools can call this function.");
         _;
     }
 

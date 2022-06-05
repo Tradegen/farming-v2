@@ -3,6 +3,7 @@
 
 pragma solidity ^0.8.3;
 
+// OpenZeppelin.
 import "./openzeppelin-solidity/contracts/Math.sol";
 import "./openzeppelin-solidity/contracts/SafeMath.sol";
 import "./openzeppelin-solidity/contracts/ReentrancyGuard.sol";
@@ -10,10 +11,10 @@ import "./openzeppelin-solidity/contracts/ERC20/SafeERC20.sol";
 import "./openzeppelin-solidity/contracts/ERC1155/IERC1155.sol";
 import "./openzeppelin-solidity/contracts/ERC1155/ERC1155Holder.sol";
 
-// Inheritance
+// Inheritance/
 import "./interfaces/IStakingRewards.sol";
 
-// Interfaces
+// Interfaces/
 import "./interfaces/IPoolManager.sol";
 
 contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
@@ -39,7 +40,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     mapping(address => uint256[4]) public balances;
     mapping(address => uint256) public weightedBalance;
 
-    //Weights per token class
+    // Weights per token class.
     uint256[4] public WEIGHTS = [65, 20, 10, 5];
 
     /* ========== CONSTRUCTOR ========== */
@@ -55,65 +56,65 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     /* ========== VIEWS ========== */
 
     /**
-     * @dev Returns the number of tokens a user has staked for the given token class.
-     * @param account address of the user.
-     * @param tokenClass class of the token (in range [1, 4] depending on the scarcity).
-     * @return (uint256) amount of tokens staked for the given class.
+     * @notice Returns the number of tokens a user has staked for the given token class.
+     * @param _account Address of the user.
+     * @param _tokenClass Class of the token (in range [1, 4] depending on the token's scarcity).
+     * @return uint256 Amount of tokens staked for the given class.
      */
-    function balanceOf(address account, uint256 tokenClass) external view override returns (uint256) {
-        require(tokenClass > 0 && tokenClass < 5, "Token class must be between 1 and 4");
+    function balanceOf(address _account, uint256 _tokenClass) external view override returns (uint256) {
+        require(_tokenClass > 0 && _tokenClass < 5, "StakingRewards: Token class must be between 1 and 4.");
 
-        return balances[account][tokenClass - 1];
+        return balances[_account][_tokenClass.sub(1)];
     }
 
     /**
-     * @dev Calculates the amount of unclaimed rewards the user has available.
-     * @param account address of the user.
-     * @return (uint256) amount of available unclaimed rewards.
+     * @notice Calculates the amount of unclaimed rewards the user has available.
+     * @param _account Address of the user.
+     * @return uint256 amount of available unclaimed rewards.
      */
-    function earned(address account) public view override returns (uint256) {
-        return weightedBalance[account].mul(rewardPerTokenStored.sub(userRewardPerTokenPaid[account])).add(rewards[account]);
+    function earned(address _account) public view override returns (uint256) {
+        return weightedBalance[_account].mul(rewardPerTokenStored.sub(userRewardPerTokenPaid[_account])).add(rewards[_account]);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
-     * @dev Stakes tokens of the given class in the farm.
-     * @param amount number of tokens to stake.
-     * @param tokenClass class of the token (in range [1, 4] depending on the scarcity).
+     * @notice Stakes tokens of the given class in the farm.
+     * @param _amount number of tokens to stake.
+     * @param _tokenClass class of the token (in range [1, 4] depending on the token's scarcity).
      */
-    function stake(uint256 amount, uint256 tokenClass) external override nonReentrant updateReward(msg.sender) {
-        require(amount > 0, "StakingRewards: Amount must be positive.");
-        require(tokenClass > 0 && tokenClass < 5, "StakingRewards: Token class must be between 1 and 4");
-        require(stakingToken.balanceOf(msg.sender, tokenClass) >= amount, "StakingRewards: Not enough tokens");
+    function stake(uint256 _amount, uint256 _tokenClass) external override nonReentrant updateReward(msg.sender) {
+        require(_amount > 0, "StakingRewards: Amount must be positive.");
+        require(_tokenClass > 0 && _tokenClass < 5, "StakingRewards: Token class must be between 1 and 4.");
+        require(stakingToken.balanceOf(msg.sender, _tokenClass) >= _amount, "StakingRewards: Not enough tokens.");
 
-        uint256 weightedAmount = amount.mul(WEIGHTS[tokenClass - 1]);
-        totalSupply = totalSupply.add(amount);
+        uint256 weightedAmount = _amount.mul(WEIGHTS[_tokenClass.sub(1)]);
+        totalSupply = totalSupply.add(_amount);
         weightedTotalSupply = weightedTotalSupply.add(weightedAmount);
         weightedBalance[msg.sender] = weightedBalance[msg.sender].add(weightedAmount);
-        balances[msg.sender][tokenClass - 1] = balances[msg.sender][tokenClass - 1].add(amount);
+        balances[msg.sender][_tokenClass.sub(1)] = balances[msg.sender][_tokenClass.sub(1)].add(_amount);
 
-        stakingToken.safeTransferFrom(msg.sender, address(this), tokenClass, amount, "0x0");
+        stakingToken.safeTransferFrom(msg.sender, address(this), _tokenClass, _amount, "0x0");
 
-        emit Staked(msg.sender, tokenClass, amount);
+        emit Staked(msg.sender, _tokenClass, _amount);
     }
 
     /**
-     * @dev Withdraws tokens of the given class from the farm.
-     * @param amount number of tokens to stake.
-     * @param tokenClass class of the token (in range [1, 4] depending on the scarcity).
+     * @notice Withdraws tokens of the given class from the farm.
+     * @param _amount Number of tokens to stake.
+     * @param _tokenClass Class of the token (in range [1, 4] depending on the token's scarcity).
      */
-    function withdraw(uint256 amount, uint256 tokenClass) public override nonReentrant updateReward(msg.sender) {
-        require(amount > 0, "StakingRewards: Amount must be positive.");
-        require(tokenClass > 0 && tokenClass < 5, "StakingRewards: Token class must be between 1 and 4");
+    function withdraw(uint256 _amount, uint256 _tokenClass) public override nonReentrant updateReward(msg.sender) {
+        require(_amount > 0, "StakingRewards: Amount must be positive.");
+        require(_tokenClass > 0 && _tokenClass < 5, "StakingRewards: Token class must be between 1 and 4.");
 
         stakingToken.setApprovalForAll(msg.sender, true);
-        _withdraw(msg.sender, amount, tokenClass);
+        _withdraw(msg.sender, _amount, _tokenClass);
     }
 
     /**
-     * @dev Claims available rewards for the user.
-     * @notice Claims pool's share of global rewards first, then claims the user's share of those rewards.
+     * @notice Claims available rewards for the user.
+     * @dev Claims pool's share of global rewards first, then claims the user's share of those rewards.
      */
     function getReward() public override nonReentrant {
         poolManager.claimLatestRewards(poolAddress);
@@ -121,16 +122,14 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     }
 
     /**
-     * @dev Withdraws all tokens a user has staked for each token class.
+     * @notice Withdraws all tokens a user has staked for each token class.
      */
     function exit() external override {
         stakingToken.setApprovalForAll(msg.sender, true);
         getReward();
 
-        for (uint i = 0; i < 4; i++)
-        {
-            if (balances[msg.sender][i] > 0)
-            {
+        for (uint256 i = 0; i < 4; i++) {
+            if (balances[msg.sender][i] > 0) {
                 _withdraw(msg.sender, balances[msg.sender][i], i.add(1));
             }
         }
@@ -139,7 +138,7 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     /* ========== INTERNAL FUNCTIONS ========== */
 
     /**
-     * @dev Claims available rewards for the user.
+     * @notice Claims available rewards for the user.
      */
     function _getReward() internal updateReward(msg.sender) {
         uint256 reward = rewards[msg.sender];
@@ -151,12 +150,18 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
         }
     }
 
-    function _withdraw(address _user, uint _amount, uint _tokenClass) internal {
-        uint256 weightedAmount = _amount.mul(WEIGHTS[_tokenClass - 1]);
+    /**
+     * @notice Withdraws tokens of the given class from the user.
+     * @param _user Address of the user withdrawing tokens.
+     * @param _amount Number of tokens to withdraw.
+     * @param _tokenClass Class of the token [1-4].
+     */
+    function _withdraw(address _user, uint256 _amount, uint256 _tokenClass) internal {
+        uint256 weightedAmount = _amount.mul(WEIGHTS[_tokenClass.sub(1)]);
         totalSupply = totalSupply.sub(_amount);
         weightedTotalSupply = weightedTotalSupply.sub(weightedAmount);
         weightedBalance[_user] = weightedBalance[_user].sub(weightedAmount);
-        balances[_user][_tokenClass - 1] = balances[_user][_tokenClass - 1].sub(_amount);
+        balances[_user][_tokenClass.sub(1)] = balances[_user][_tokenClass.sub(1)].sub(_amount);
 
         stakingToken.safeTransferFrom(address(this), _user, _tokenClass, _amount, "0x0");
 
@@ -166,41 +171,41 @@ contract StakingRewards is IStakingRewards, ReentrancyGuard, ERC1155Holder {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     /**
-     * @dev Updates the available rewards for the pool, based on the pool's share of global rewards.
-     * @notice This function is meant to be called by the PoolManager contract.
-     * @param reward number of tokens to add to the pool.
+     * @notice Updates the available rewards for the pool, based on the pool's share of global rewards.
+     * @dev This function is meant to be called by the PoolManager contract.
+     * @param _reward number of tokens to add to the pool.
      */
-    function addReward(uint256 reward) external override onlyPoolManager {
+    function addReward(uint256 _reward) external override onlyPoolManager {
         // Transfer to xTGEN contract if total supply is 0.
         // This prevents rewards tokens from getting stuck in this contract.
         if (weightedTotalSupply == 0) {
-            rewardsToken.safeTransfer(xTGEN, reward);
+            rewardsToken.safeTransfer(xTGEN, _reward);
             return;
         }
 
-        rewardPerTokenStored = rewardPerTokenStored.add(reward.div(weightedTotalSupply));
-        totalAvailableRewards = totalAvailableRewards.add(reward);
+        rewardPerTokenStored = rewardPerTokenStored.add(_reward.div(weightedTotalSupply));
+        totalAvailableRewards = totalAvailableRewards.add(_reward);
 
-        emit RewardAdded(reward);
+        emit RewardAdded(_reward);
     }
 
     /* ========== MODIFIERS ========== */
 
-    modifier updateReward(address account) {
-        rewards[account] = earned(account);
-        userRewardPerTokenPaid[account] = rewardPerTokenStored;
+    modifier updateReward(address _account) {
+        rewards[_account] = earned(_account);
+        userRewardPerTokenPaid[_account] = rewardPerTokenStored;
         _;
     }
 
     modifier onlyPoolManager() {
-        require(msg.sender == address(poolManager), "StakingRewards: only the PoolManager contract can call this function");
+        require(msg.sender == address(poolManager), "StakingRewards: Only the PoolManager contract can call this function.");
         _;
     }
 
     /* ========== EVENTS ========== */
 
     event RewardAdded(uint256 reward);
-    event Staked(address indexed user, uint tokenClass, uint256 amount);
-    event Withdrawn(address indexed user, uint tokenClass, uint256 amount);
+    event Staked(address indexed user, uint256 tokenClass, uint256 amount);
+    event Withdrawn(address indexed user, uint256 tokenClass, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
 }

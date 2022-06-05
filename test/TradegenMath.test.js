@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-/*
+
 describe("TradegenMath", () => {
   let deployer;
   let otherUser;
@@ -133,4 +133,4 @@ describe("TradegenMath", () => {
         expect(result5).to.equal(200);
     });
   });
-});*/
+});

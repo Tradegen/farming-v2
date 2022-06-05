@@ -61,7 +61,7 @@ describe("StakingRewards", () => {
     let tx4 = await stakingToken.safeBatchTransferFrom(deployer.address, otherUser.address, [1, 2, 3, 4], [10, 10, 10, 10], '0x00');
     await tx4.wait();
   });
-  /*
+  
   describe("#stake", () => {
     it("stake() with one investor with one token class when distribution has not started", async () => {
         let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
@@ -316,8 +316,8 @@ describe("StakingRewards", () => {
         const balanceOfClass4Other = await stakingRewards.balanceOf(otherUser.address, 4);
         expect(balanceOfClass4Other).to.equal(1);
     });
-  });*/
-  /*
+  });
+  
   describe("#withdraw without rewards", () => {
     it("withdraw() partial amount of one token class with one investor when distribution has not started", async () => {
         let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
@@ -872,8 +872,8 @@ describe("StakingRewards", () => {
         const balanceOfOtherClass4 = await stakingRewards.connect(otherUser).balanceOf(otherUser.address, 4);
         expect(balanceOfOtherClass4).to.equal(0);
     });
-  });*/
-  /*
+  });
+  
   describe("#addReward without claiming", () => {
     it("addReward() once with no users staked", async () => {
         let tx = await stakingRewards.addReward(100000);
@@ -1496,8 +1496,8 @@ describe("StakingRewards", () => {
         const balance = await rewardToken.balanceOf(scheduleAddress);
         expect(balance).to.equal(100000);
     });
-  });*/
-  /*
+  });
+  
   describe("#getReward", () => {
     it("getReward() with one user and nothing staked; no rewards distributed", async () => {
         const balanceBefore = await rewardToken.balanceOf(deployer.address);
@@ -1924,8 +1924,8 @@ describe("StakingRewards", () => {
         const balance = await rewardToken.balanceOf(scheduleAddress);
         expect(balance).to.equal(0);
     });
-  });*/
-  /*
+  });
+  
   describe("#exit", () => {
     it("exit() with one user; no rewards available", async () => {
         let tx = await stakingToken.setApprovalForAll(stakingRewardsAddress, true);
@@ -2216,8 +2216,8 @@ describe("StakingRewards", () => {
         const balance = await rewardToken.balanceOf(scheduleAddress);
         expect(balance).to.equal(0);
     });
-  });*/
-  /*
+  });
+  
   describe("#withdraw with rewards", () => {
     it("withdraw() partial amount with one investor; no rewards available", async () => {
         const balanceBefore = await rewardToken.balanceOf(deployer.address);
@@ -3420,5 +3420,5 @@ describe("StakingRewards", () => {
         const balance = await rewardToken.balanceOf(scheduleAddress);
         expect(balance).to.equal(0);
     });
-  });*/
+  });
 });

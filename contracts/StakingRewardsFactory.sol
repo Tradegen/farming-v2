@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.3;
 
-// OpenZeppelin
+// OpenZeppelin.
 import "./openzeppelin-solidity/contracts/Ownable.sol";
 
-// Internal references
+// Internal references.
 import './StakingRewards.sol';
 
-// Inheritance
+// Inheritance.
 import './interfaces/IStakingRewardsFactory.sol';
 
 contract StakingRewardsFactory is IStakingRewardsFactory, Ownable {
@@ -25,18 +25,18 @@ contract StakingRewardsFactory is IStakingRewardsFactory, Ownable {
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
-     * @dev Creates a farm for the given pool.
-     * @notice This function can only be called by the PoolManager contract.
-     * @param poolAddress address of the pool.
+     * @notice Creates a farm for the given pool.
+     * @dev This function can only be called by the PoolManager contract.
+     * @param _poolAddress address of the pool.
      * @return (uint256) address of the newly created farm.
      */
-    function createFarm(address poolAddress) external override poolManagerIsSet onlyPoolManager returns(address) {
-        require(poolAddress != address(0), "StakingRewardsFactory: invalid address.");
+    function createFarm(address _poolAddress) external override poolManagerIsSet onlyPoolManager returns (address) {
+        require(_poolAddress != address(0), "StakingRewardsFactory: Invalid address.");
         
-        //Create farm
-        address farmAddress = address(new StakingRewards(poolManager, rewardToken, poolAddress, stakingTGEN));
+        // Create farm.
+        address farmAddress = address(new StakingRewards(poolManager, rewardToken, _poolAddress, stakingTGEN));
 
-        emit CreatedFarm(poolAddress, farmAddress);
+        emit CreatedFarm(_poolAddress, farmAddress);
 
         return farmAddress;
     }
@@ -44,11 +44,11 @@ contract StakingRewardsFactory is IStakingRewardsFactory, Ownable {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     /**
-     * @dev Sets the address of the PoolManager contract.
-     * @notice This function can only be called once, and must be called before a farm can be created.
+     * @notice Sets the address of the PoolManager contract.
+     * @dev This function can only be called once, and must be called before a farm can be created.
      */
     function setPoolManager(address _poolManager) external onlyOwner poolManagerIsNotSet {
-        require(_poolManager != address(0), "StakingRewardsFactory: invalid address.");
+        require(_poolManager != address(0), "StakingRewardsFactory: Invalid address.");
 
         poolManager = _poolManager;
 
