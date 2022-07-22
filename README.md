@@ -2,6 +2,8 @@
 
 A fully on-chain yield farming system for pools (permissionless hedge funds that intereact with white-listed protocols on Celo). A pool's weight is updated automatically when the pool's deposit(), withdraw(), takeSnapshot(), and executeTransaction() functions are called. Rewards are released on a halvening schedule with 26-week cycles, lasting indefinitely.
 
+Testnet rewards begin on September 1, 2022 at 12AM UTC.
+
 ## Eligibility
 
 Pools will be eligible for rewards after meeting the following requirements:
@@ -13,7 +15,7 @@ The pool manager can manually mark a pool as eligible once all requirements are 
 
 ## Disclaimer
 
-These smart contracts have not been audited or deployed yet.
+The system is deployed on testnet but the contracts have not been audited yet.
 
 ## Docs
 
