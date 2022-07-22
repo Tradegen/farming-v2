@@ -250,6 +250,8 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
         });
 
         _getReward(msg.sender);
+
+        emit UpdatedWeight(msg.sender, _newUnrealizedProfits, _poolTokenPrice);
     }
 
     /**
@@ -438,9 +440,9 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
 
     /* ========== EVENTS ========== */
 
-    event RewardPaid(address indexed user, uint256 reward);
-    event RegisteredPool(address indexed poolAddress, address farmAddress);
-    event MarkedPoolAsEligible(address indexed poolAddress);
-    event UpdatedWeight(address indexed poolAddress, uint256 newUnrealizedProfits);
+    event RewardPaid(address poolAddress, uint256 reward);
+    event RegisteredPool(address poolAddress, address farmAddress);
+    event MarkedPoolAsEligible(address poolAddress);
+    event UpdatedWeight(address poolAddress, uint256 newUnrealizedProfits, uint256 newTokenPrice);
     event SetReleaseEscrow(address releaseEscrowAddress);
 }

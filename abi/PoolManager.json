@@ -13,7 +13,7 @@
       },
       {
         "internalType": "address",
-        "name": "_poolFactory",
+        "name": "_registry",
         "type": "address"
       },
       {
@@ -39,7 +39,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
         "name": "poolAddress",
         "type": "address"
@@ -71,7 +71,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
         "name": "poolAddress",
         "type": "address"
@@ -90,9 +90,9 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
-        "name": "user",
+        "name": "poolAddress",
         "type": "address"
       },
       {
@@ -122,7 +122,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
         "name": "poolAddress",
         "type": "address"
@@ -131,6 +131,12 @@
         "indexed": false,
         "internalType": "uint256",
         "name": "newUnrealizedProfits",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newTokenPrice",
         "type": "uint256"
       }
     ],
@@ -267,19 +273,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "poolFactory",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -381,6 +374,19 @@
         "internalType": "uint256",
         "name": "createdOn",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "registry",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -546,7 +552,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "poolAddress",
+        "name": "_poolAddress",
         "type": "address"
       }
     ],
@@ -593,7 +599,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "poolAddress",
+        "name": "_poolAddress",
         "type": "address"
       }
     ],
@@ -612,7 +618,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "timestamp",
+        "name": "_timestamp",
         "type": "uint256"
       }
     ],
@@ -631,7 +637,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "periodIndex",
+        "name": "_periodIndex",
         "type": "uint256"
       }
     ],
@@ -650,7 +656,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "poolAddress",
+        "name": "_poolAddress",
         "type": "address"
       }
     ],
@@ -669,12 +675,12 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "newUnrealizedProfits",
+        "name": "_newUnrealizedProfits",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "poolTokenPrice",
+        "name": "_poolTokenPrice",
         "type": "uint256"
       }
     ],
@@ -687,12 +693,12 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "poolAddress",
+        "name": "_poolAddress",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "seedPrice",
+        "name": "_seedPrice",
         "type": "uint256"
       }
     ],
@@ -705,12 +711,12 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "totalValueLocked",
+        "name": "_totalValueLocked",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "numberOfInvestors",
+        "name": "_numberOfInvestors",
         "type": "uint256"
       }
     ],
