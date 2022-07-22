@@ -347,7 +347,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
 
     /**
      * @notice Calculates the pool's weight.
-     * @dev The weight is calculated by [unrealizedProfits / 1e18 * x].
+     * @dev The weight is calculated by [unrealizedProfits * x].
      * @dev If pool's APC >= average APC, x = sqrt(pool APC - average APC).
      * @dev Else, x = log2(pool APC) / sqrt(average APC - pool APC).
      * @dev Average APC = totalWeightedAPC / totalDuration.

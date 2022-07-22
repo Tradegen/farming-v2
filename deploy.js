@@ -1,103 +1,163 @@
 const { ethers } = require("hardhat");
 const { parseEther } = require("@ethersproject/units");
 
-const TGEN = "0x58aaFAe9790163Db1899d9be3C145230D0430F3A";
-const deployedNFTPoolAddress = "0x3e820DAAAE5A31DA7458cdd14696524C5F4b6AEF";
+const TGEN_ADDRESS_TESTNET = "0xa9e37D0DC17C8B8Ed457Ab7cCC40b5785d4d11C0";
+const TGEN_ADDRESS_MAINNET = "";
 
-const TradegenERC20ABI = require('./build/abi/TradegenERC20');
-const PoolManagerABI = require('./build/abi/PoolManager');
-const ReleaseEscrowABI = require('./build/abi/ReleaseEscrow');
+const XTGEN_ADDRESS_TESTNET = "0x4a03DBf1A734BfE935347cccd3CC57f770c59C28";
+const XTGEN_ADDRESS_MAINNET = "";
 
-async function main() {
-    const signers = await ethers.getSigners();
-    deployer = signers[0];
+const REGISTRY_ADDRESS_TESTNET = "0x1DB1B73DDDAC81b957E744763d85c81dd638f2eE";
+const REGISTRY_ADDRESS_MAINNET = "";
 
-    let TradegenERC20 = new ethers.Contract(TGEN, TradegenERC20ABI, deployer);
-    
-    let PoolManagerFactory = await ethers.getContractFactory('PoolManager');
-    let TokenAllocatorFactory = await ethers.getContractFactory('TokenAllocator');
-    let HalveningReleaseScheduleFactory = await ethers.getContractFactory('HalveningReleaseSchedule');
-    let ReleaseEscrowFactory = await ethers.getContractFactory('ReleaseEscrow');
+const RELEASE_SCHEDULE_ADDRESS_TESTNET = "0x59c8A678844899719AD1080bE4f9Ba7A480073ED";
+const RELEASE_SCHEDULE_ADDRESS_MAINNET = "";
 
-    let releaseSchedule = await HalveningReleaseScheduleFactory.deploy(parseEther("3000000"), 26, 6);
-    await releaseSchedule.deployed();
-    console.log("ReleaseSchedule: " + releaseSchedule.address);
+const RELEASE_ESCROW_ADDRESS_TESTNET = "0x1B2f1ad1E13Cd3994B0E89A0ba419F010130021D";
+const RELEASE_ESCROW_ADDRESS_MAINNET = "";
 
-    let tokenAllocator = await TokenAllocatorFactory.deploy("Tradegen Mining Token Allocator", "MTA", 18, deployer.address, TGEN);
-    await tokenAllocator.deployed();
-    console.log("TokenAllocator: " + tokenAllocator.address);
+const STAKING_REWARDS_FACTORY_ADDRESS_TESTNET = "0xD8F61f5aeD9f45f32B87174fd9eE8a613Fe16FF3";
+const STAKING_REWARDS_FACTORY_ADDRESS_MAINNET = "";
 
-    let poolManager = await PoolManagerFactory.deploy(deployer.address, deployer.address, TGEN, tokenAllocator.address, releaseSchedule.address);
-    await poolManager.deployed();
-    console.log("PoolManager: " + poolManager.address);
+const POOL_MANAGER_ADDRESS_TESTNET = "0x00da430073a248e9d2d421D1Aa3503B371B170a8";
+const POOL_MANAGER_ADDRESS_MAINNET = "";
 
-    let tx = await tokenAllocator.addBeneficiary(poolManager.address, parseEther("153562500"));
-    await tx.wait();
+const MATH_LIBRARY_ADDRESS_TESTNET = "0x6350DCd835100d63ce8E313DCFFFa23EE1756960";
+const MATH_LIBRARY_ADDRESS_MAINNET = "";
 
-    console.log("tx");
-
-    let tx2 = await tokenAllocator.lockBeneficiaries();
-    await tx2.wait();
-
-    console.log("tx2");
-
-    //8:10PM CST, September 26, 2021
-    const timestamp = 1632707807 + 120;
-
-    let releaseEscrow = await ReleaseEscrowFactory.deploy(tokenAllocator.address, TGEN, releaseSchedule.address, timestamp);
-    await releaseEscrow.deployed();
-    console.log("ReleaseEscrow: " + releaseEscrow.address);
-
-    let tx3 = await poolManager.setWeight(deployedNFTPoolAddress, 100);
-    await tx3.wait();
-
-    console.log("tx3");
-    /*
-    let tx4 = await releaseEscrow.withdraw(1);
-    await tx4.wait();
-
-    console.log("tx4");
-
-    let tx5 = await poolManager.initializePeriod([deployedNFTPoolAddress]);
-    await tx5.wait();*/
-}
-
-async function initialize() {
+async function deployMathLibrary() {
   const signers = await ethers.getSigners();
   deployer = signers[0];
-
-  const releaseEscrowAddress = "0x98464Cc955aA0d59988f47c99d3507d19A1f02d0";
-  const poolManagerAddress = "0xF7834aD83a32FA97A687E659b7C9120fd7bf710d";
-
-  let ReleaseEscrow = new ethers.Contract(releaseEscrowAddress, ReleaseEscrowABI, deployer);
-  let PoolManager = new ethers.Contract(poolManagerAddress, PoolManagerABI, deployer);
-  let TradegenERC20 = new ethers.Contract(TGEN, TradegenERC20ABI, deployer);
   
-  await TradegenERC20.approve(releaseEscrowAddress, parseEther("153562500"));
-  await TradegenERC20.transfer(releaseEscrowAddress, parseEther("153562500"));
+  let MathFactory = await ethers.getContractFactory('TradegenMath');
+  math = await MathFactory.deploy();
+  await math.deployed();
+  console.log("Math Library: " + math.address);
+}
 
-  let balance = await TradegenERC20.balanceOf(releaseEscrowAddress);
-  console.log(balance);
+async function deployReleaseSchedule() {
+  const signers = await ethers.getSigners();
+  deployer = signers[0];
+  
+  let ReleaseScheduleFactory = await ethers.getContractFactory('HalveningReleaseSchedule');
+  
+  // September 1, 2022.
+  let schedule = await ReleaseScheduleFactory.deploy(parseEther("300000000"), 1661990400);
+  await schedule.deployed();
+  let scheduleAddress = schedule.address;
+  console.log("HalveningReleaseSchedule: " + scheduleAddress);
+}
 
-  let tx4 = await ReleaseEscrow.withdraw(1);
-  await tx4.wait();
+async function deployStakingRewardsFactory() {
+  const signers = await ethers.getSigners();
+  deployer = signers[0];
+  
+  let StakingRewardsFactoryFactory = await ethers.getContractFactory('StakingRewardsFactory');
+  
+  let factoryContract = await StakingRewardsFactoryFactory.deploy(TGEN_ADDRESS_TESTNET, XTGEN_ADDRESS_TESTNET);
+  await factoryContract.deployed();
+  let factoryAddress = factoryContract.address;
+  console.log("StakingRewardsFactory: " + factoryAddress);
+}
 
-  console.log("tx4");
+async function deployPoolManager() {
+  const signers = await ethers.getSigners();
+  deployer = signers[0];
+  
+  let PoolManagerFactory = await ethers.getContractFactory('PoolManager');
+  
+  let poolManager = await PoolManagerFactory.deploy(TGEN_ADDRESS_TESTNET, RELEASE_SCHEDULE_ADDRESS_TESTNET, REGISTRY_ADDRESS_TESTNET, STAKING_REWARDS_FACTORY_ADDRESS_TESTNET, TGEN_ADDRESS_TESTNET, XTGEN_ADDRESS_TESTNET);
+  await poolManager.deployed();
+  let poolManagerAddress = poolManager.address;
+  console.log("PoolManager: " + poolManagerAddress);
+}
 
-  let tx5 = await PoolManager.initializePeriod([deployedNFTPoolAddress]);
-  await tx5.wait();
+async function setPoolManager() {
+  const signers = await ethers.getSigners();
+  deployer = signers[0];
+  
+  let StakingRewardsFactoryFactory = await ethers.getContractFactory('StakingRewardsFactory');
+  let factory = StakingRewardsFactoryFactory.attach(STAKING_REWARDS_FACTORY_ADDRESS_TESTNET);
+  
+  let tx = await factory.setPoolManager(POOL_MANAGER_ADDRESS_TESTNET);
+  await tx.wait();
+
+  let manager = await factory.poolManager();
+  console.log(manager);
+}
+
+async function deployReleaseEscrow() {
+  const signers = await ethers.getSigners();
+  deployer = signers[0];
+  
+  let ReleaseEscrowFactory = await ethers.getContractFactory('ReleaseEscrow');
+  
+  // Same timestamp as release schedule.
+  let escrow = await ReleaseEscrowFactory.deploy(POOL_MANAGER_ADDRESS_TESTNET, TGEN_ADDRESS_TESTNET, RELEASE_SCHEDULE_ADDRESS_TESTNET, 1661990400);
+  await escrow.deployed();
+  let escrowAddress = escrow.address;
+  console.log("ReleaseEscrow: " + escrowAddress);
+}
+
+async function setReleaseEscrow() {
+  const signers = await ethers.getSigners();
+  deployer = signers[0];
+  
+  let PoolManagerFactory = await ethers.getContractFactory('PoolManager');
+  let poolManager = PoolManagerFactory.attach(POOL_MANAGER_ADDRESS_TESTNET);
+  
+  let tx = await poolManager.setReleaseEscrow(RELEASE_ESCROW_ADDRESS_TESTNET);
+  await tx.wait();
+
+  let escrow = await poolManager.releaseEscrow();
+  console.log(escrow);
 }
 /*
-main()
+deployMathLibrary()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(error)
+    process.exit(1)
+  })
+
+deployReleaseSchedule()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(error)
+    process.exit(1)
+  })
+
+deployStakingRewardsFactory()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(error)
+    process.exit(1)
+  })
+
+deployPoolManager()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(error)
+    process.exit(1)
+  })
+
+setPoolManager()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(error)
+    process.exit(1)
+  })
+
+deployReleaseEscrow()
   .then(() => process.exit(0))
   .catch(error => {
     console.error(error)
     process.exit(1)
   })*/
 
-initialize()
+setReleaseEscrow()
   .then(() => process.exit(0))
   .catch(error => {
     console.error(error)
     process.exit(1)
-})
+  })
