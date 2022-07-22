@@ -282,7 +282,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
             createdOn: block.timestamp
         });
 
-        emit RegisteredPool(_poolAddress, farmAddress);
+        emit RegisteredPool(_poolAddress, farmAddress, _seedPrice);
     }
 
     /**
@@ -441,7 +441,7 @@ contract PoolManager is IPoolManager, ReentrancyGuard, Ownable {
     /* ========== EVENTS ========== */
 
     event RewardPaid(address poolAddress, uint256 reward);
-    event RegisteredPool(address poolAddress, address farmAddress);
+    event RegisteredPool(address poolAddress, address farmAddress, uint256 seedPrice);
     event MarkedPoolAsEligible(address poolAddress);
     event UpdatedWeight(address poolAddress, uint256 newUnrealizedProfits, uint256 newTokenPrice);
     event SetReleaseEscrow(address releaseEscrowAddress);

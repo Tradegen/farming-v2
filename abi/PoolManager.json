@@ -81,6 +81,12 @@
         "internalType": "address",
         "name": "farmAddress",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "seedPrice",
+        "type": "uint256"
       }
     ],
     "name": "RegisteredPool",
