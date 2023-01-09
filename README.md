@@ -1,4 +1,4 @@
-# Yield Farming
+# Tradegen Yield Farming
 
 A fully on-chain yield farming system for pools (permissionless hedge funds that intereact with white-listed protocols on Celo). A pool's weight is updated automatically when the pool's deposit(), withdraw(), takeSnapshot(), and executeTransaction() functions are called. Rewards are released on a halvening schedule with 26-week cycles, lasting indefinitely.
 
@@ -15,11 +15,15 @@ The pool manager can manually mark a pool as eligible once all requirements are 
 
 ## Disclaimer
 
-The system is deployed on testnet but the contracts have not been audited yet.
+These smart contracts have not been audited yet.
 
-## Docs
+## Documentation
 
-Docs are available at https://docs.tradegen.io
+To learn more about the Tradegen project, visit the docs at https://docs.tradegen.io.
+
+This protocol is launched on the Celo blockchain. To learn more about Celo, visit their home page: https://celo.org/.
+
+Source code for asset management protocol: https://github.com/Tradegen/protocol-v2.
 
 ## License
 
