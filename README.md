@@ -17,11 +17,11 @@ The pool manager can manually mark a pool as eligible once all requirements are 
 
 ### Smart Contracts
 
-* HalveningReleaseSchedule - Stores the release schedule for a reward token.
-* PoolManager - Registers pools, updates their weight, and calculates available rewards.
-* ReleaseEscrow - Stores reward tokens to be released according to the HalveningReleaseSchedule.
-* StakingRewards - Handles entering/exiting a yield-farming position and claiming rewards.
-* StakingRewardsFactory - Creates StakingRewards contracts.
+* HalveningReleaseSchedule - Used for calculating the number of tokens unlocked based on the time elapsed since the contract was deployed. Tokens are unlocked on a halvening schedule to ensure there will always be tokens to distribute.
+* PoolManager - The main contract of the farming system. It is responsible for registering pools, marking pools as eligible to receive rewards after meeting minimum criteria, updating pool weights after each external transaction, and withdrawing unlocked tokens from escrow.
+* ReleaseEscrow - Stores the lifetime supply of tokens to distribute. It uses the HalveningReleaseSchedule contract to determine how many tokens to unlock at any given time. The contract is called by the PoolManager contract whenever a pool updates weights or a user claims rewards.
+* StakingRewards -  Each registered pool has a unique Staking Rewards contract that represents a 'farm' in existing yield farming systems. This contract receives rewards (if any) from the PoolManager contract whenever its associated pool is updated through an external transaction (such as depositing or withdrawing). Users can stake their pool tokens in this contract to earn a share of the pool's rewards proportional to their stake.
+* StakingRewardsFactory - Creates a StakingRewards contracts whenever a pool is registered in the system.
 
 ## Repository Structure
 
