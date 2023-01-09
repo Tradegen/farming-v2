@@ -13,6 +13,16 @@ Pools will be eligible for rewards after meeting the following requirements:
 
 The pool manager can manually mark a pool as eligible once all requirements are met.
 
+## System Design
+
+### Smart Contracts
+
+* HalveningReleaseSchedule - Stores the release schedule for a reward token.
+* PoolManager - Registers pools, updates their weight, and calculates available rewards.
+* ReleaseEscrow - Stores reward tokens to be released according to the HalveningReleaseSchedule.
+* StakingRewards - Handles entering/exiting a yield-farming position and claiming rewards.
+* StakingRewardsFactory - Creates StakingRewards contracts.
+
 ## Repository Structure
 
 ```
