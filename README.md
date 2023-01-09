@@ -4,6 +4,10 @@ A fully on-chain yield farming system for pools (permissionless hedge funds that
 
 Testnet rewards begin on September 1, 2022 at 12AM UTC.
 
+## Purpose
+
+Create a self-sustaining reward system that can be seamlessly integrated by other protocols.
+
 ## Eligibility
 
 Pools will be eligible for rewards after meeting the following requirements:
