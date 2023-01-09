@@ -1,12 +1,14 @@
 # Tradegen Yield Farming
 
-A fully on-chain yield farming system for pools (permissionless hedge funds that intereact with white-listed protocols on Celo). A pool's weight is updated automatically when the pool's deposit(), withdraw(), takeSnapshot(), and executeTransaction() functions are called. Rewards are released on a halvening schedule with 26-week cycles, lasting indefinitely.
-
-Testnet rewards begin on September 1, 2022 at 12AM UTC.
-
 ## Purpose
 
 Create a self-sustaining reward system that can be seamlessly integrated by other protocols.
+
+## Overview
+
+The Tradegen yield farming system is a fully on-chain self-sustaining reward system. The system is integrated by the Tradegen asset management protocol to reward pools based on their performance. Pools can be registered in the system after meeting the minimum criteria (see below). Rewards are distributed indefinitely, using a halvening release schedule, to pools proportional to their weight in the system. A pool's weight is determined by its performance relative to other pools, and is updated automatically whenever the pool makes a transaction (deposit, withdraw, or interact with external contract).
+
+Users can deposit their pool tokens (issued by the asset management protocol) into the pool's farming contract (StakingRewards) to receive rewards proportional to their stake while staying invested in the pool. A pool's rewards are sent to the pool's farming contract whenever a user claims rewards.
 
 ## Eligibility
 
@@ -44,6 +46,8 @@ The pool manager can manually mark a pool as eligible once all requirements are 
 ## Disclaimer
 
 These smart contracts have not been audited yet.
+
+Testnet rewards began on September 1, 2022 at 12AM UTC.
 
 ## Documentation
 
