@@ -13,6 +13,20 @@ Pools will be eligible for rewards after meeting the following requirements:
 
 The pool manager can manually mark a pool as eligible once all requirements are met.
 
+## Repository Structure
+
+```
+.
+├── abi  ## Generated ABIs that developers can use to interact with the system.
+├── addresses  ## Address of each deployed contract, organized by network.
+├── contracts  ## All source code.
+│   ├── interfaces  ## Interfaces used for defining/calling contracts.
+│   ├── libraries  ## Helper functions used throughout the protocol.
+│   ├── openzeppelin-solidity  ## Helper contracts provided by OpenZeppelin.
+│   ├── test  ## Mock contracts used for testing main contracts.
+├── test ## Source code for testing code in //contracts.
+```
+
 ## Disclaimer
 
 These smart contracts have not been audited yet.
